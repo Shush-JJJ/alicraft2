@@ -4,6 +4,15 @@
     var category = ViewBag.Category as string;
     var q = ViewBag.Query as string;
     var sort = ViewBag.Sort as string ?? "newest";
+    var categories = (ViewBag.Categories as IEnumerable<string>) ?? Enumerable.Empty<string>();
+
+    string Pluralize(string c) => c switch
+    {
+        "Frame"        => "Frames",
+        "Keychain"     => "Keychains",
+        "3D Display"   => "3D Displays",
+        _              => c
+    };
 }
 
 <div class="section-head">
@@ -25,9 +34,15 @@
 </div>
 
 <div class="chips">
-    <a asp-action="Index" asp-route-sort="@sort" class="chip @(string.IsNullOrEmpty(category) || category == "All" ? "active" : "")">All</a>
-    <a asp-action="Index" asp-route-category="Frame" asp-route-sort="@sort" class="chip @(category == "Frame" ? "active" : "")">Frames</a>
-    <a asp-action="Index" asp-route-category="Keychain" asp-route-sort="@sort" class="chip @(category == "Keychain" ? "active" : "")">Keychains</a>
+    <a asp-action="Index" asp-route-q="@q" asp-route-sort="@sort" class="chip @(string.IsNullOrEmpty(category) || category == "All" ? "active" : "")">All</a>
+    @foreach (var c in categories)
+    {
+        <a asp-action="Index"
+           asp-route-category="@c"
+           asp-route-q="@q"
+           asp-route-sort="@sort"
+           class="chip @(category == c ? "active" : "")">@Pluralize(c)</a>
+    }
 </div>
 
 @if (!Model.Any())

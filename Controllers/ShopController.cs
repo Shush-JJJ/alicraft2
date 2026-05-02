@@ -30,6 +30,12 @@ public class ShopController : Controller
         };
 
         var products = await query.ToListAsync();
+        ViewBag.Categories = await _db.Products
+            .Where(p => p.IsActive && p.Category != null && p.Category != "")
+            .Select(p => p.Category!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
         ViewBag.Category = category ?? "All";
         ViewBag.Query = q ?? "";
         ViewBag.Sort = sort ?? "newest";
