@@ -1,0 +1,19 @@
+=== status ===
+ M .gitignore
+ M Data/DbInitializer.cs
+D  gitlog.txt
+D  pushlog.txt
+ D wwwroot/images/frame-acrylic.jpg
+ D wwwroot/images/frame-classic.webp
+ D wwwroot/images/frame-heart.webp
+ D wwwroot/images/keychain-couple.webp
+ D wwwroot/images/keychain-personalized.webp
+ D wwwroot/images/keychain-pet-memorial.webp
+?? pl.txt
+?? wwwroot/images/3d-box-lithophane.webp
+?? wwwroot/images/heart-keychain-lithophane.webp
+?? wwwroot/images/rectangle-keychain-lithophane.webp
+?? wwwroot/images/rectangle-lithophane.webp
+?? wwwroot/images/square-keychain-lithophane.jpg
+?? wwwroot/images/square-lithophane.webp
+=== add ===
