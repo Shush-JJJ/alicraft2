@@ -57,7 +57,7 @@ public static class DbInitializer
                     Category = "Frame",
                     Price = 799m,
                     Stock = 25,
-                    ImagePath = "/images/placeholder-frame.svg"
+                    ImagePath = "/images/frame-classic.webp"
                 },
                 new Product
                 {
@@ -66,7 +66,7 @@ public static class DbInitializer
                     Category = "Frame",
                     Price = 699m,
                     Stock = 30,
-                    ImagePath = "/images/placeholder-frame2.svg"
+                    ImagePath = "/images/frame-heart.webp"
                 },
                 new Product
                 {
@@ -75,7 +75,7 @@ public static class DbInitializer
                     Category = "Frame",
                     Price = 1_199m,
                     Stock = 15,
-                    ImagePath = "/images/placeholder-frame3.svg"
+                    ImagePath = "/images/frame-acrylic.jpg"
                 },
                 new Product
                 {
@@ -84,7 +84,7 @@ public static class DbInitializer
                     Category = "Keychain",
                     Price = 199m,
                     Stock = 100,
-                    ImagePath = "/images/placeholder-keychain.svg"
+                    ImagePath = "/images/keychain-personalized.webp"
                 },
                 new Product
                 {
@@ -93,7 +93,7 @@ public static class DbInitializer
                     Category = "Keychain",
                     Price = 349m,
                     Stock = 50,
-                    ImagePath = "/images/placeholder-keychain2.svg"
+                    ImagePath = "/images/keychain-couple.webp"
                 },
                 new Product
                 {
@@ -102,7 +102,7 @@ public static class DbInitializer
                     Category = "Keychain",
                     Price = 249m,
                     Stock = 60,
-                    ImagePath = "/images/placeholder-keychain3.svg"
+                    ImagePath = "/images/keychain-pet-memorial.webp"
                 }
             );
             await db.SaveChangesAsync();
