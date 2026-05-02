@@ -16,6 +16,19 @@ public class SmtpSettings
     public string BaseUrl { get; set; } = "http://localhost:5080";
 }
 
+public record EmailDiagnostics(
+    bool IsRealSendConfigured,
+    string Host,
+    int Port,
+    bool EnableSsl,
+    string Username,        // masked
+    string PasswordStatus,  // "set (length=16)" or "MISSING"
+    string FromEmail,
+    string FromName,
+    string BaseUrl,
+    string MissingFields    // comma-joined, empty if none
+);
+
 public interface IEmailService
 {
     /// <summary>Send an email. Returns true if sent (or simulated). False if a real send failed.</summary>
@@ -26,6 +39,12 @@ public interface IEmailService
 
     /// <summary>The base URL that should be used to construct absolute links inside email content.</summary>
     string BaseUrl { get; }
+
+    /// <summary>Returns a snapshot of the current SMTP settings with sensitive values masked, for admin diagnostics.</summary>
+    EmailDiagnostics GetDiagnostics();
+
+    /// <summary>Same as SendAsync, but returns the SMTP exception message on failure for diagnostic display.</summary>
+    Task<(bool ok, string? error)> TrySendAsync(string toEmail, string toName, string subject, string htmlBody);
 }
 
 public class EmailService : IEmailService
@@ -50,25 +69,78 @@ public class EmailService : IEmailService
         ? "http://localhost:5080"
         : _settings.BaseUrl.TrimEnd('/');
 
+    public EmailDiagnostics GetDiagnostics()
+    {
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(_settings.Host))      missing.Add("Smtp__Host");
+        if (string.IsNullOrWhiteSpace(_settings.Username))  missing.Add("Smtp__Username");
+        if (string.IsNullOrWhiteSpace(_settings.Password))  missing.Add("Smtp__Password");
+        if (string.IsNullOrWhiteSpace(_settings.FromEmail)) missing.Add("Smtp__FromEmail");
+
+        static string MaskEmail(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            var at = s.IndexOf('@');
+            if (at <= 0) return new string('*', s.Length);
+            var local = s.Substring(0, at);
+            var domain = s.Substring(at);
+            var keep = local.Length <= 2 ? local : local.Substring(0, 2);
+            return keep + new string('*', Math.Max(0, local.Length - keep.Length)) + domain;
+        }
+
+        var pwStatus = string.IsNullOrEmpty(_settings.Password)
+            ? "MISSING"
+            : $"set (length={_settings.Password.Length}, no whitespace stripped)";
+
+        return new EmailDiagnostics(
+            IsRealSendConfigured: IsRealSendConfigured,
+            Host: _settings.Host,
+            Port: _settings.Port,
+            EnableSsl: _settings.EnableSsl,
+            Username: MaskEmail(_settings.Username),
+            PasswordStatus: pwStatus,
+            FromEmail: MaskEmail(_settings.FromEmail),
+            FromName: _settings.FromName,
+            BaseUrl: BaseUrl,
+            MissingFields: string.Join(", ", missing)
+        );
+    }
+
     public async Task<bool> SendAsync(string toEmail, string toName, string subject, string htmlBody)
+    {
+        var (ok, _) = await TrySendAsync(toEmail, toName, subject, htmlBody);
+        return ok;
+    }
+
+    public async Task<(bool ok, string? error)> TrySendAsync(string toEmail, string toName, string subject, string htmlBody)
     {
         if (!IsRealSendConfigured)
         {
-            // Dev fallback: log the email to console so the developer can copy the verification link.
+            var missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(_settings.Host))      missing.Add("Smtp__Host");
+            if (string.IsNullOrWhiteSpace(_settings.Username))  missing.Add("Smtp__Username");
+            if (string.IsNullOrWhiteSpace(_settings.Password))  missing.Add("Smtp__Password");
+            if (string.IsNullOrWhiteSpace(_settings.FromEmail)) missing.Add("Smtp__FromEmail");
+            var msg = $"SMTP not configured. Missing: {string.Join(", ", missing)}";
             _log.LogWarning(
-                "[EmailService] SMTP not configured. Would send to {To} <{Name}> | Subject: {Subject}\n--- Body ---\n{Body}\n------------",
-                toEmail, toName, subject, StripHtml(htmlBody));
-            return true;
+                "[EmailService] {Msg}. Would send to {To} <{Name}> | Subject: {Subject}\n--- Body ---\n{Body}\n------------",
+                msg, toEmail, toName, subject, StripHtml(htmlBody));
+            // SendAsync historically returned true here so the user-facing flow continues; preserve that.
+            return (true, msg);
         }
+
+        _log.LogInformation(
+            "[EmailService] Sending email via {Host}:{Port} (ssl={Ssl}) from {From} to {To}: {Subject}",
+            _settings.Host, _settings.Port, _settings.EnableSsl, _settings.FromEmail, toEmail, subject);
 
         try
         {
-            using var msg = new MailMessage();
-            msg.From = new MailAddress(_settings.FromEmail, _settings.FromName);
-            msg.To.Add(new MailAddress(toEmail, toName));
-            msg.Subject = subject;
-            msg.Body = htmlBody;
-            msg.IsBodyHtml = true;
+            using var mailMsg = new MailMessage();
+            mailMsg.From = new MailAddress(_settings.FromEmail, _settings.FromName);
+            mailMsg.To.Add(new MailAddress(toEmail, toName));
+            mailMsg.Subject = subject;
+            mailMsg.Body = htmlBody;
+            mailMsg.IsBodyHtml = true;
 
             using var client = new SmtpClient(_settings.Host, _settings.Port)
             {
@@ -81,14 +153,24 @@ public class EmailService : IEmailService
                 Timeout = 60_000
             };
 
-            await client.SendMailAsync(msg);
+            await client.SendMailAsync(mailMsg);
             _log.LogInformation("Email sent to {To}: {Subject}", toEmail, subject);
-            return true;
+            return (true, null);
+        }
+        catch (SmtpException ex)
+        {
+            var detail = $"{ex.GetType().Name}: {ex.Message}" +
+                         (ex.StatusCode != 0 ? $" (status={ex.StatusCode})" : "") +
+                         (ex.InnerException != null ? $" | inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}" : "");
+            _log.LogError(ex, "Failed to send email to {To}: {Subject}. {Detail}", toEmail, subject, detail);
+            return (false, detail);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Failed to send email to {To}: {Subject}", toEmail, subject);
-            return false;
+            var detail = $"{ex.GetType().Name}: {ex.Message}" +
+                         (ex.InnerException != null ? $" | inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}" : "");
+            _log.LogError(ex, "Failed to send email to {To}: {Subject}. {Detail}", toEmail, subject, detail);
+            return (false, detail);
         }
     }
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Alicraft2.Data;
 using Alicraft2.Models;
+using Alicraft2.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,48 @@ public class AdminController : Controller
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _email;
 
-    public AdminController(AppDbContext db, IWebHostEnvironment env)
+    public AdminController(AppDbContext db, IWebHostEnvironment env, IEmailService email)
     {
         _db = db;
         _env = env;
+        _email = email;
+    }
+
+    // ---------- EMAIL DIAGNOSTICS ----------
+    [HttpGet]
+    public IActionResult EmailDiag()
+    {
+        ViewBag.Diag = _email.GetDiagnostics();
+        ViewBag.TestResult = TempData["TestResult"] as string;
+        ViewBag.TestOk = TempData["TestOk"] as bool? ?? false;
+        ViewBag.TestRecipient = TempData["TestRecipient"] as string;
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EmailDiagSend(string recipient)
+    {
+        if (string.IsNullOrWhiteSpace(recipient))
+        {
+            TempData["TestOk"] = false;
+            TempData["TestResult"] = "Please enter a recipient email address.";
+            return RedirectToAction(nameof(EmailDiag));
+        }
+
+        var subject = "AliCraft test email";
+        var html = "<p>Hi! This is a test email sent from the AliCraft admin diagnostics page.</p>" +
+                   $"<p>Time: {DateTime.UtcNow:u}</p>" +
+                   "<p>If you received this, your live SMTP setup is working.</p>";
+        var (ok, error) = await _email.TrySendAsync(recipient.Trim(), recipient.Trim(), subject, html);
+        TempData["TestOk"] = ok && error == null;
+        TempData["TestRecipient"] = recipient;
+        TempData["TestResult"] = ok && error == null
+            ? $"Test email sent to {recipient}. Check the inbox (and Spam)."
+            : $"Send failed: {error}";
+        return RedirectToAction(nameof(EmailDiag));
     }
 
     public async Task<IActionResult> Index()
