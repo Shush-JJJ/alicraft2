@@ -17,34 +17,31 @@
 
 <div class="card">
     <div class="card-body">
-        <h3 class="mt-0">SMTP status</h3>
+        <h3 class="mt-0">Email provider</h3>
         <p>
+            <strong>@diag.Provider</strong>
             @if (diag.IsRealSendConfigured)
             {
-                <span style="background:#16a34a;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700;">CONFIGURED</span>
+                <span style="background:#16a34a;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700;margin-left:8px;">CONFIGURED</span>
                 <small class="text-muted">— the app will attempt to send real emails.</small>
             }
             else
             {
-                <span style="background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700;">NOT CONFIGURED</span>
+                <span style="background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700;margin-left:8px;">NOT CONFIGURED</span>
                 <small class="text-muted">— emails will only be logged. Missing: <code>@diag.MissingFields</code></small>
             }
         </p>
 
         <table class="table" style="margin-top:1rem;">
             <tbody>
-                <tr><th style="width:200px;">Smtp__Host</th><td><code>@diag.Host</code></td></tr>
-                <tr><th>Smtp__Port</th><td><code>@diag.Port</code></td></tr>
-                <tr><th>Smtp__EnableSsl</th><td><code>@diag.EnableSsl</code></td></tr>
-                <tr><th>Smtp__Username</th><td><code>@diag.Username</code></td></tr>
-                <tr><th>Smtp__Password</th><td><code>@diag.PasswordStatus</code></td></tr>
-                <tr><th>Smtp__FromEmail</th><td><code>@diag.FromEmail</code></td></tr>
-                <tr><th>Smtp__FromName</th><td><code>@diag.FromName</code></td></tr>
-                <tr><th>Smtp__BaseUrl</th><td><code>@diag.BaseUrl</code></td></tr>
+                @foreach (var f in diag.Fields)
+                {
+                    <tr><th style="width:200px;">@f.Key</th><td><code>@f.Value</code></td></tr>
+                }
             </tbody>
         </table>
         <p class="text-muted" style="font-size:.85rem;margin-top:1rem;">
-            Username and FromEmail are masked for safety. The password is never displayed — only its length is shown.
+            Email addresses are masked for safety. Secrets (passwords / API keys) are never displayed — only length and short prefix are shown.
         </p>
     </div>
 </div>

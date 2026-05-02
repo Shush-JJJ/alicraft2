@@ -16,17 +16,14 @@ public class SmtpSettings
     public string BaseUrl { get; set; } = "http://localhost:5080";
 }
 
+public record EmailDiagField(string Key, string Value);
+
 public record EmailDiagnostics(
+    string Provider,                              // e.g. "SMTP (Gmail)" or "Brevo HTTP API"
     bool IsRealSendConfigured,
-    string Host,
-    int Port,
-    bool EnableSsl,
-    string Username,        // masked
-    string PasswordStatus,  // "set (length=16)" or "MISSING"
-    string FromEmail,
-    string FromName,
+    string MissingFields,                         // comma-joined env-var names, empty if none
     string BaseUrl,
-    string MissingFields    // comma-joined, empty if none
+    IReadOnlyList<EmailDiagField> Fields          // per-provider fields, in display order
 );
 
 public interface IEmailService
@@ -77,32 +74,28 @@ public class EmailService : IEmailService
         if (string.IsNullOrWhiteSpace(_settings.Password))  missing.Add("Smtp__Password");
         if (string.IsNullOrWhiteSpace(_settings.FromEmail)) missing.Add("Smtp__FromEmail");
 
-        static string MaskEmail(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            var at = s.IndexOf('@');
-            if (at <= 0) return new string('*', s.Length);
-            var local = s.Substring(0, at);
-            var domain = s.Substring(at);
-            var keep = local.Length <= 2 ? local : local.Substring(0, 2);
-            return keep + new string('*', Math.Max(0, local.Length - keep.Length)) + domain;
-        }
-
         var pwStatus = string.IsNullOrEmpty(_settings.Password)
             ? "MISSING"
             : $"set (length={_settings.Password.Length}, no whitespace stripped)";
 
+        var fields = new List<EmailDiagField>
+        {
+            new("Smtp__Host",      _settings.Host),
+            new("Smtp__Port",      _settings.Port.ToString()),
+            new("Smtp__EnableSsl", _settings.EnableSsl.ToString()),
+            new("Smtp__Username",  EmailMasking.MaskEmail(_settings.Username)),
+            new("Smtp__Password",  pwStatus),
+            new("Smtp__FromEmail", EmailMasking.MaskEmail(_settings.FromEmail)),
+            new("Smtp__FromName",  _settings.FromName),
+            new("Smtp__BaseUrl",   BaseUrl)
+        };
+
         return new EmailDiagnostics(
+            Provider: "SMTP (System.Net.Mail)",
             IsRealSendConfigured: IsRealSendConfigured,
-            Host: _settings.Host,
-            Port: _settings.Port,
-            EnableSsl: _settings.EnableSsl,
-            Username: MaskEmail(_settings.Username),
-            PasswordStatus: pwStatus,
-            FromEmail: MaskEmail(_settings.FromEmail),
-            FromName: _settings.FromName,
+            MissingFields: string.Join(", ", missing),
             BaseUrl: BaseUrl,
-            MissingFields: string.Join(", ", missing)
+            Fields: fields
         );
     }
 
@@ -179,5 +172,27 @@ public class EmailService : IEmailService
         if (string.IsNullOrEmpty(html)) return html;
         var noTags = System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", " ");
         return System.Text.RegularExpressions.Regex.Replace(noTags, "\\s+", " ").Trim();
+    }
+}
+
+internal static class EmailMasking
+{
+    public static string MaskEmail(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var at = s.IndexOf('@');
+        if (at <= 0) return new string('*', s.Length);
+        var local = s.Substring(0, at);
+        var domain = s.Substring(at);
+        var keep = local.Length <= 2 ? local : local.Substring(0, 2);
+        return keep + new string('*', Math.Max(0, local.Length - keep.Length)) + domain;
+    }
+
+    public static string MaskSecret(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "MISSING";
+        var visible = s.Length <= 8 ? 0 : 4;
+        var hidden = s.Length - visible;
+        return $"set (length={s.Length}, prefix={s.Substring(0, Math.Min(visible, s.Length))}{(hidden > 0 ? new string('*', Math.Min(hidden, 12)) : "")})";
     }
 }
