@@ -1,0 +1,31 @@
+# Build outputs
+bin/
+obj/
+
+# Local SQLite database (a fresh one is created on container start)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Runtime logs from local dev
+*.log
+*.err
+
+# Local-only secrets (SMTP creds etc. come in via env vars on Render)
+appsettings.Development.json
+
+# IDE / OS noise
+.vs/
+.vscode/
+.idea/
+.windsurf/
+.git/
+.gitignore
+.dockerignore
+Thumbs.db
+.DS_Store
+
+# Cascade scratch files
+live.txt
+nav-test.txt

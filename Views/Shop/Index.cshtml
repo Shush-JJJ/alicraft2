@@ -1,0 +1,72 @@
+@model IEnumerable<Product>
+@{
+    ViewData["Title"] = "Shop";
+    var category = ViewBag.Category as string;
+    var q = ViewBag.Query as string;
+    var sort = ViewBag.Sort as string ?? "newest";
+}
+
+<div class="section-head">
+    <div>
+        <h2>Shop lithophanes</h2>
+        <p class="lead">Handcrafted frames and keychains — customize any of them.</p>
+    </div>
+    <form method="get" class="flex gap-1" style="max-width:420px;">
+        <input type="text" name="q" value="@q" class="form-control" placeholder="Search…" />
+        <input type="hidden" name="category" value="@category" />
+        <select name="sort" class="form-control" onchange="this.form.submit()" style="max-width:160px;">
+            <option value="newest"     selected="@(sort == "newest" ? "selected" : null)">Newest</option>
+            <option value="price-asc"  selected="@(sort == "price-asc" ? "selected" : null)">Price ↑</option>
+            <option value="price-desc" selected="@(sort == "price-desc" ? "selected" : null)">Price ↓</option>
+            <option value="name"       selected="@(sort == "name" ? "selected" : null)">Name</option>
+        </select>
+        <button class="btn btn-primary">Find</button>
+    </form>
+</div>
+
+<div class="chips">
+    <a asp-action="Index" asp-route-sort="@sort" class="chip @(string.IsNullOrEmpty(category) || category == "All" ? "active" : "")">All</a>
+    <a asp-action="Index" asp-route-category="Frame" asp-route-sort="@sort" class="chip @(category == "Frame" ? "active" : "")">Frames</a>
+    <a asp-action="Index" asp-route-category="Keychain" asp-route-sort="@sort" class="chip @(category == "Keychain" ? "active" : "")">Keychains</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No products found. Try a different search or category.</div>
+}
+else
+{
+    <div class="product-grid">
+        @foreach (var p in Model)
+        {
+            <div class="product">
+                <a asp-action="Details" asp-route-id="@p.Id" class="thumb">
+                    <span class="category-tag">@p.Category</span>
+                    <img src="@(string.IsNullOrEmpty(p.ImagePath) ? "/images/placeholder-frame.svg" : p.ImagePath)" alt="@p.Name" />
+                </a>
+                <div class="body">
+                    <a asp-action="Details" asp-route-id="@p.Id" class="name" style="color:inherit;">@p.Name</a>
+                    <div class="desc">@p.Description</div>
+                    <div class="price">
+                        ₱@p.Price.ToString("N2")
+                        @if (p.Stock == 0)
+                        {
+                            <small style="color:#dc2626;font-weight:700;">· Out of stock</small>
+                        }
+                        else if (p.Stock <= 5)
+                        {
+                            <small style="color:#dc2626;font-weight:700;">· Only @p.Stock left!</small>
+                        }
+                        else
+                        {
+                            <small>· @p.Stock in stock</small>
+                        }
+                    </div>
+                    <div class="cta">
+                        <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-primary btn-sm btn-block">Buy Now</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

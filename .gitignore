@@ -1,0 +1,39 @@
+# --- .NET build output ---
+bin/
+obj/
+*.user
+*.suo
+
+# --- Local secrets ---
+# Contains real SMTP password — never commit. Render sets env vars instead.
+appsettings.Development.json
+
+# --- Local SQLite database (Render uses an ephemeral DB; seeded fresh on boot) ---
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# --- Runtime logs ---
+*.log
+*.err
+
+# --- User-uploaded files (each environment has its own) ---
+wwwroot/uploads/avatars/*
+wwwroot/uploads/chat/*
+wwwroot/uploads/custom/*
+wwwroot/uploads/payments/*
+wwwroot/uploads/products/*
+!wwwroot/uploads/**/.gitkeep
+
+# --- IDE / OS noise ---
+.vs/
+.vscode/
+.idea/
+.windsurf/
+Thumbs.db
+.DS_Store
+
+# --- Cascade scratch files ---
+live.txt
+nav-test.txt

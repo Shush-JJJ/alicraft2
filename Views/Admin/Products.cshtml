@@ -1,0 +1,57 @@
+@model IEnumerable<Product>
+@{
+    ViewData["Title"] = "Products (admin)";
+    var q = ViewBag.Query as string;
+}
+
+<div class="section-head">
+    <div>
+        <h2>Products</h2>
+        <p class="lead">@Model.Count() item(s) total</p>
+    </div>
+    <div class="flex gap-1">
+        <form method="get" class="flex gap-1">
+            <input type="text" name="q" value="@q" class="form-control" placeholder="Search products…" />
+            <button class="btn btn-outline">Find</button>
+        </form>
+        <a asp-action="CreateProduct" class="btn btn-primary">+ New product</a>
+    </div>
+</div>
+
+<table class="table">
+    <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td><img src="@(string.IsNullOrEmpty(p.ImagePath) ? "/images/placeholder-frame.svg" : p.ImagePath)" alt="@p.Name" style="width:60px;height:60px;border-radius:8px;object-fit:cover;" /></td>
+            <td><strong>@p.Name</strong><br/><small class="text-muted">@p.Description</small></td>
+            <td>@p.Category</td>
+            <td>₱@p.Price.ToString("N2")</td>
+            <td>
+                @if (p.Stock == 0)
+                {
+                    <span class="badge-pill badge-cancelled">Out of stock</span>
+                }
+                else if (p.Stock <= 5)
+                {
+                    <span class="badge-pill badge-pending">Low · @p.Stock</span>
+                }
+                else
+                {
+                    @p.Stock
+                }
+            </td>
+            <td>@(p.IsActive ? Html.Raw("<span class='badge-pill badge-active'>Active</span>") : Html.Raw("<span class='badge-pill badge-archived'>Archived</span>"))</td>
+            <td class="actions">
+                <a asp-action="EditProduct" asp-route-id="@p.Id" class="btn btn-outline btn-sm">Edit</a>
+                <form asp-action="DeleteProduct" method="post" style="display:inline" onsubmit="return confirm('Delete/archive this product?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

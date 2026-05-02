@@ -1,0 +1,30 @@
+@model IEnumerable<User>
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="section-head">
+    <div>
+        <h2>Customers</h2>
+        <p class="lead">@Model.Count() registered customers</p>
+    </div>
+</div>
+
+<table class="table">
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Joined</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var u in Model)
+    {
+        <tr>
+            <td><strong>@u.Name</strong></td>
+            <td>@u.Email</td>
+            <td>@u.Phone</td>
+            <td>@u.City, @u.Province</td>
+            <td>@u.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+            <td class="actions">
+                <a asp-controller="Chat" asp-action="Thread" asp-route-userId="@u.Id" class="btn btn-outline btn-sm">💬 Chat</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

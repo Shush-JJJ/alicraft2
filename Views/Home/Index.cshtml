@@ -1,0 +1,117 @@
+@model IEnumerable<Product>
+@{
+    ViewData["Title"] = "Home";
+}
+
+<section class="hero">
+    <div class="hero-grid">
+        <div>
+            <h1>Light up your favorite memories in 3D.</h1>
+            <p>AliCraft Creations turns your photos into stunning handcrafted 3D lithophane frames and keychains. Personal. Tangible. Unforgettable.</p>
+            <div class="hero-actions">
+                <a asp-controller="Shop" asp-action="Index" class="btn btn-primary btn-lg">Shop Now</a>
+                <a asp-controller="Home" asp-action="About" class="btn btn-warm btn-lg">Learn More</a>
+            </div>
+        </div>
+        <div class="hero-img-wrap text-center">
+            <img src="~/images/logo.png" alt="AliCraft Creations logo" />
+        </div>
+    </div>
+</section>
+
+<div class="section-head">
+    <div>
+        <h2>Featured Creations</h2>
+        <p class="lead">Hand-picked lithophane designs — ready to personalize.</p>
+    </div>
+    <a asp-controller="Shop" asp-action="Index" class="btn btn-outline">Browse all →</a>
+</div>
+
+<div class="product-grid">
+    @foreach (var p in Model)
+    {
+        <div class="product">
+            <a asp-controller="Shop" asp-action="Details" asp-route-id="@p.Id" class="thumb">
+                <span class="category-tag">@p.Category</span>
+                <img src="@(string.IsNullOrEmpty(p.ImagePath) ? "/images/placeholder-frame.svg" : p.ImagePath)" alt="@p.Name" />
+            </a>
+            <div class="body">
+                <a asp-controller="Shop" asp-action="Details" asp-route-id="@p.Id" class="name" style="color:inherit;">@p.Name</a>
+                <div class="desc">@p.Description</div>
+                <div class="price">₱@p.Price.ToString("N2") <small>· @p.Stock in stock</small></div>
+                <div class="cta">
+                    <a asp-controller="Shop" asp-action="Details" asp-route-id="@p.Id" class="btn btn-outline btn-sm btn-block">View</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<section class="mt-4">
+    <div class="section-head">
+        <div>
+            <h2>Why choose AliCraft?</h2>
+            <p class="lead">We turn ordinary photos into extraordinary, glowing keepsakes.</p>
+        </div>
+    </div>
+    <div class="row-3">
+        <div class="card"><div class="card-body">
+            <div class="pay-icon" style="background:var(--ac-gradient-warm)">3D</div>
+            <h3>Handcrafted 3D detail</h3>
+            <p class="text-muted">Every lithophane is printed with precision and finished by hand for stunning depth.</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="pay-icon" style="background:linear-gradient(135deg,var(--ac-cyan),var(--ac-blue))">PH</div>
+            <h3>Nationwide shipping</h3>
+            <p class="text-muted">Secure packaging and fast delivery across the Philippines with live order tracking.</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="pay-icon">@@</div>
+            <h3>Real-time chat</h3>
+            <p class="text-muted">Talk directly with our craftsman to customize your lithophane exactly how you want it.</p>
+        </div></div>
+    </div>
+</section>
+
+<section class="mt-4">
+    <div class="section-head">
+        <div>
+            <h2>What customers say</h2>
+            <p class="lead">Real words from people who gave AliCraft lithophanes as gifts.</p>
+        </div>
+    </div>
+    <div class="row-3">
+        <div class="card"><div class="card-body">
+            <div class="flex gap-1" style="align-items:center;">
+                <div class="pay-icon">M</div>
+                <div><strong>Maricel D.</strong><br/><small class="text-muted">Quezon City</small></div>
+            </div>
+            <div class="mt-1" style="color:var(--ac-orange);letter-spacing:2px;">★★★★★</div>
+            <p class="text-muted mt-1 mb-0">"Gave this as an anniversary gift and my husband nearly cried. The photo looks like it's glowing from inside the frame. Ang ganda talaga!"</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="flex gap-1" style="align-items:center;">
+                <div class="pay-icon" style="background:linear-gradient(135deg,var(--ac-cyan),var(--ac-blue))">J</div>
+                <div><strong>Juan P.</strong><br/><small class="text-muted">Cebu City</small></div>
+            </div>
+            <div class="mt-1" style="color:var(--ac-orange);letter-spacing:2px;">★★★★★</div>
+            <p class="text-muted mt-1 mb-0">"Ordered a pet memorial keychain for my late dog. The detail is unbelievable — the admin even sent me a preview before printing. 10/10."</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="flex gap-1" style="align-items:center;">
+                <div class="pay-icon" style="background:var(--ac-gradient-warm)">A</div>
+                <div><strong>Angela R.</strong><br/><small class="text-muted">Davao</small></div>
+            </div>
+            <div class="mt-1" style="color:var(--ac-orange);letter-spacing:2px;">★★★★★</div>
+            <p class="text-muted mt-1 mb-0">"Fast shipping and the tracker kept me in the loop the entire time. Matching keychains for me and my bestie — she loved it!"</p>
+        </div></div>
+    </div>
+</section>
+
+<section class="mt-4 mb-3">
+    <div class="card" style="background:var(--ac-gradient);color:#fff;border:0;"><div class="card-body text-center" style="padding:2.5rem 1rem;">
+        <h2 style="color:#fff;margin:0 0 .5rem;">Ready to light up a memory?</h2>
+        <p style="opacity:.95;margin:0 0 1.25rem;">Browse the shop, upload your photo at checkout, and we'll handcraft it with love.</p>
+        <a asp-controller="Shop" asp-action="Index" class="btn btn-lg" style="background:#fff;color:var(--ac-purple);">Start shopping →</a>
+    </div></div>
+</section>

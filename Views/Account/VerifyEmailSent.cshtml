@@ -1,0 +1,43 @@
+@{
+    ViewData["Title"] = "Check your email";
+    var email = (string?)ViewBag.Email ?? "";
+    var smtpReal = (bool)(ViewBag.SmtpConfigured ?? false);
+}
+
+<section class="card">
+    <div class="auth-shell" style="min-height:auto;">
+        <div class="auth-hero">
+            <img src="~/images/logo.png" alt="AliCraft" />
+            <h1>One more step.</h1>
+            <p>Confirm your email to activate your AliCraft Creations account.</p>
+        </div>
+        <div class="auth-form-wrap">
+            <div class="auth-form text-center">
+                <div style="font-size:3.5rem;margin-bottom:.5rem;">📩</div>
+                <h2>Check your inbox</h2>
+                <p class="lead">
+                    We sent a verification link to<br/>
+                    <strong style="color:var(--ac-purple);">@email</strong>
+                </p>
+                <p class="text-muted">Click the link in that email to verify your address and activate your account.</p>
+
+                @if (!smtpReal)
+                {
+                    <div class="alert alert-warning text-left mt-2">
+                        <strong>Developer note:</strong> SMTP is not configured in <code>appsettings.json</code>.
+                        The verification link was logged to the server console. Open the terminal where the app is running, find the line starting with <code>[EmailService]</code>, and copy the verification URL.
+                    </div>
+                }
+
+                <p class="text-muted mt-3" style="font-size:.9rem;">
+                    Didn't get the email? Check your spam folder, or
+                    <a asp-action="ResendVerification" asp-route-email="@email">resend the verification link</a>.
+                </p>
+
+                <div class="mt-3">
+                    <a asp-action="Login" class="btn btn-outline">Back to login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

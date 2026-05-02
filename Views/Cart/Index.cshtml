@@ -1,0 +1,75 @@
+@model IEnumerable<CartItem>
+@{
+    ViewData["Title"] = "Your cart";
+    var subtotal = Model.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
+    var shipping = Model.Any() ? 79m : 0m;
+}
+
+<div class="section-head">
+    <div>
+        <h2>Your cart</h2>
+        <p class="lead">@(Model.Any() ? $"{Model.Sum(c => c.Quantity)} item(s) ready for checkout" : "Your cart is currently empty.")</p>
+    </div>
+    <a asp-controller="Shop" asp-action="Index" class="btn btn-outline">← Continue shopping</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card"><div class="card-body text-center">
+        <img src="~/images/logo.png" style="height:100px;opacity:.6;" alt="AliCraft" />
+        <h3>Nothing here yet.</h3>
+        <p class="text-muted">Head over to the shop to discover our lithophane creations.</p>
+        <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">Browse the shop</a>
+    </div></div>
+}
+else
+{
+    <div class="grid-3">
+        <div class="card"><div>
+            @foreach (var item in Model)
+            {
+                <div class="cart-item">
+                    <div class="thumb"><img src="@(string.IsNullOrEmpty(item.Product?.ImagePath) ? "/images/placeholder-frame.svg" : item.Product.ImagePath)" alt="@item.Product?.Name" /></div>
+                    <div>
+                        <div class="name">@item.Product?.Name</div>
+                        <div class="text-muted" style="font-size:.88rem;">₱@(item.Product?.Price.ToString("N2") ?? "0.00") each · @item.Product?.Category</div>
+                        @if (!string.IsNullOrEmpty(item.CustomNote))
+                        {
+                            <div class="text-muted mt-1" style="font-size:.85rem;">📝 @item.CustomNote</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.CustomImagePath))
+                        {
+                            <a href="@item.CustomImagePath" target="_blank" class="text-muted" style="font-size:.85rem;">🖼 View your uploaded photo</a>
+                        }
+                        <form asp-action="UpdateQty" method="post" class="mt-1 flex gap-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <span class="qty">
+                                <label>Qty:</label>
+                                <input type="number" name="quantity" value="@item.Quantity" min="1" class="form-control" />
+                            </span>
+                            <button type="submit" class="btn btn-outline btn-sm">Update</button>
+                        </form>
+                    </div>
+                    <div class="text-right">
+                        <div class="price" style="color:var(--ac-pink);font-weight:800;font-size:1.1rem;">₱@((item.Product?.Price ?? 0) * item.Quantity)</div>
+                        <form asp-action="Remove" method="post" class="mt-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Remove this item?');">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div></div>
+
+        <div class="card"><div class="card-body">
+            <h3 class="mt-0">Order summary</h3>
+            <div class="flex-between"><span>Subtotal</span><strong>₱@subtotal.ToString("N2")</strong></div>
+            <div class="flex-between"><span>Shipping</span><strong>₱@shipping.ToString("N2")</strong></div>
+            <hr />
+            <div class="flex-between"><span style="font-size:1.1rem;">Total</span><strong style="color:var(--ac-pink);font-size:1.3rem;">₱@((subtotal + shipping).ToString("N2"))</strong></div>
+            <a asp-controller="Orders" asp-action="Checkout" class="btn btn-primary btn-lg btn-block mt-2">Checkout →</a>
+        </div></div>
+    </div>
+}

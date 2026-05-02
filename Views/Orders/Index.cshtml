@@ -1,0 +1,74 @@
+@model IEnumerable<Order>
+@{
+    ViewData["Title"] = "My orders";
+    var status = ViewBag.Status as string;
+    string[] filters = { "All", "Pending", "Processing", "InTransit", "Delivered", "Cancelled" };
+}
+
+<div class="section-head">
+    <div>
+        <h2>My orders</h2>
+        <p class="lead">Track your purchases and review past transactions.</p>
+    </div>
+    <a asp-controller="Shop" asp-action="Index" class="btn btn-outline">← Shop more</a>
+</div>
+
+<div class="chips">
+    @foreach (var f in filters)
+    {
+        var label = f == "InTransit" ? "In Transit" : f;
+        <a asp-action="Index" asp-route-status="@(f == "All" ? null : f)" class="chip @(status == f ? "active" : "")">@label</a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card"><div class="card-body text-center">
+        <p>No orders to show.</p>
+        <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">Start shopping</a>
+    </div></div>
+}
+else
+{
+    <table class="table">
+        <thead><tr>
+            <th>Order #</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>
+        @foreach (var o in Model)
+        {
+            <tr>
+                <td><strong>@o.OrderNumber</strong></td>
+                <td>@o.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+                <td>@o.Items.Sum(i => i.Quantity)</td>
+                <td>₱@o.Total.ToString("N2")</td>
+                <td>
+                    @{
+                        var cls = o.Status switch {
+                            OrderStatus.Pending => "badge-pending",
+                            OrderStatus.Processing => "badge-processing",
+                            OrderStatus.InTransit => "badge-intransit",
+                            OrderStatus.Delivered => "badge-delivered",
+                            OrderStatus.Cancelled => "badge-cancelled",
+                            _ => ""
+                        };
+                        var label = o.Status == OrderStatus.InTransit ? "In Transit" : o.Status;
+                    }
+                    <span class="badge-pill @cls">@label</span>
+                </td>
+                <td class="actions">
+                    <a asp-action="Track" asp-route-id="@o.Id" class="btn btn-outline btn-sm">Track</a>
+                    <a asp-action="Details" asp-route-id="@o.Id" class="btn btn-ghost btn-sm">Details</a>
+                    @if (o.Status == OrderStatus.Delivered || o.Status == OrderStatus.Cancelled)
+                    {
+                        <form asp-action="Reorder" asp-route-id="@o.Id" method="post" style="display:inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-warm btn-sm">🔁 Buy again</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,94 @@
+@model Order
+@{
+    ViewData["Title"] = "Order " + Model.OrderNumber;
+}
+
+<a asp-action="Index" class="text-muted">← All orders</a>
+
+<div class="section-head mt-1">
+    <div>
+        <h2>Order @Model.OrderNumber</h2>
+        <p class="lead">Placed on @Model.CreatedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</p>
+    </div>
+    <div class="flex gap-1">
+        <button type="button" class="btn btn-outline" onclick="window.print()">🖨 Print</button>
+        <a asp-action="Track" asp-route-id="@Model.Id" class="btn btn-outline">Track order →</a>
+    </div>
+</div>
+
+@await Html.PartialAsync("_Tracker", Model)
+
+<div class="grid-3 mt-3">
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Items</h3>
+        <table class="table">
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+            <tbody>
+            @foreach (var i in Model.Items)
+            {
+                <tr>
+                    <td>
+                        <strong>@i.ProductName</strong>
+                        @if (!string.IsNullOrEmpty(i.CustomNote))
+                        {
+                            <div class="text-muted" style="font-size:.82rem;">📝 @i.CustomNote</div>
+                        }
+                        @if (!string.IsNullOrEmpty(i.CustomImagePath))
+                        {
+                            <a href="@i.CustomImagePath" target="_blank" class="text-muted" style="font-size:.82rem;">🖼 custom photo</a>
+                        }
+                    </td>
+                    <td>@i.Quantity</td>
+                    <td>₱@i.UnitPrice.ToString("N2")</td>
+                    <td>₱@((i.UnitPrice * i.Quantity).ToString("N2"))</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <div class="flex-between mt-2"><span>Subtotal</span><strong>₱@Model.Subtotal.ToString("N2")</strong></div>
+        <div class="flex-between"><span>Shipping</span><strong>₱@Model.Shipping.ToString("N2")</strong></div>
+        <div class="flex-between mt-1"><span style="font-size:1.1rem;">Total</span><strong style="color:var(--ac-pink);font-size:1.25rem;">₱@Model.Total.ToString("N2")</strong></div>
+
+        <div class="flex gap-1 mt-2">
+            <form asp-action="Reorder" asp-route-id="@Model.Id" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-warm">🔁 Buy again</button>
+            </form>
+            @if (Model.Status == OrderStatus.Pending || Model.Status == OrderStatus.Processing)
+            {
+                <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" style="display:inline"
+                      onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Cancel order</button>
+                </form>
+            }
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Shipping</h3>
+        <p class="mb-0">
+            <strong>@Model.ShippingName</strong><br/>
+            @Model.ShippingPhone<br/>
+            @Model.ShippingStreet, @Model.ShippingBarangay<br/>
+            @Model.ShippingCity, @Model.ShippingProvince @Model.ShippingPostalCode
+        </p>
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <p class="mt-1"><strong>Note:</strong> @Model.Notes</p>
+        }
+
+        <h3 class="mt-3">Payment</h3>
+        <p class="mb-0"><strong>@Model.PaymentMethod</strong></p>
+        @if (!string.IsNullOrEmpty(Model.PaymentReference))
+        {
+            <p class="text-muted mb-0">Ref: @Model.PaymentReference</p>
+        }
+        @if (!string.IsNullOrEmpty(Model.PaymentProofPath))
+        {
+            <a href="@Model.PaymentProofPath" target="_blank" class="btn btn-outline btn-sm mt-1">View proof</a>
+        }
+
+        <a asp-controller="Chat" asp-action="Index" class="btn btn-warm btn-block mt-3">💬 Chat about this order</a>
+    </div></div>
+</div>

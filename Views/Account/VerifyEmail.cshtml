@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Verify email";
+    var status = (string?)ViewBag.Status ?? "invalid";
+    var email = (string?)ViewBag.Email ?? "";
+}
+
+<section class="card">
+    <div class="auth-shell" style="min-height:auto;">
+        <div class="auth-hero">
+            <img src="~/images/logo.png" alt="AliCraft" />
+            <h1>@(status == "ok" ? "You're in!" : "Email verification")</h1>
+            <p>@(status == "ok" ? "Your account is now active." : "Verifying your email address...")</p>
+        </div>
+        <div class="auth-form-wrap">
+            <div class="auth-form text-center">
+                @if (status == "ok")
+                {
+                    <div style="font-size:3.5rem;margin-bottom:.5rem;color:#16a34a;">✓</div>
+                    <h2>Email verified</h2>
+                    <p class="lead"><strong>@email</strong> has been verified.</p>
+                    <p class="text-muted">You can now log in and start ordering custom lithophanes.</p>
+                    <a asp-action="Login" class="btn btn-primary btn-lg btn-block mt-2">Log in</a>
+                }
+                else if (status == "already")
+                {
+                    <div style="font-size:3.5rem;margin-bottom:.5rem;color:var(--ac-purple);">✓</div>
+                    <h2>Already verified</h2>
+                    <p class="lead"><strong>@email</strong> is already verified.</p>
+                    <a asp-action="Login" class="btn btn-primary btn-lg btn-block mt-2">Log in</a>
+                }
+                else if (status == "expired")
+                {
+                    <div style="font-size:3.5rem;margin-bottom:.5rem;">⏰</div>
+                    <h2>Link expired</h2>
+                    <p class="lead">This verification link has expired.</p>
+                    <p class="text-muted">Verification links are valid for 24 hours. Request a fresh one to continue.</p>
+                    <a asp-action="ResendVerification" asp-route-email="@email" class="btn btn-primary btn-lg btn-block mt-2">Resend verification email</a>
+                }
+                else
+                {
+                    <div style="font-size:3.5rem;margin-bottom:.5rem;color:#ef4444;">✕</div>
+                    <h2>Invalid link</h2>
+                    <p class="lead">This verification link is invalid or has already been used.</p>
+                    <p class="text-muted">If you need a new link, request one with your email address below.</p>
+                    <a asp-action="ResendVerification" class="btn btn-primary btn-lg btn-block mt-2">Resend verification email</a>
+                }
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,36 @@
+@model dynamic
+@{
+    ViewData["Title"] = "Inbox";
+}
+
+<div class="section-head">
+    <div>
+        <h2>Customer inbox</h2>
+        <p class="lead">Reply to customer messages in real time.</p>
+    </div>
+</div>
+
+<div class="thread-list">
+    @foreach (var t in Model)
+    {
+        var user = t.User as User;
+        var initial = user?.Name?.Substring(0,1).ToUpper() ?? "?";
+        <a asp-controller="Chat" asp-action="Thread" asp-route-userId="@t.UserId" class="thread-item">
+            <div class="av">@initial</div>
+            <div>
+                <div class="flex-between"><strong>@user?.Name</strong><span class="text-muted" style="font-size:.8rem;">@(((DateTime)t.LastAt).ToLocalTime().ToString("MMM d · h:mm tt"))</span></div>
+                <div class="last">@(((string)t.Last).Length > 80 ? ((string)t.Last).Substring(0,80) + "…" : (string)t.Last)</div>
+            </div>
+            <div>
+                @if ((int)t.Unread > 0)
+                {
+                    <span class="unread-dot">@t.Unread new</span>
+                }
+            </div>
+        </a>
+    }
+    @if (!((IEnumerable<dynamic>)Model).Any())
+    {
+        <div class="card"><div class="card-body text-center text-muted">No conversations yet.</div></div>
+    }
+</div>

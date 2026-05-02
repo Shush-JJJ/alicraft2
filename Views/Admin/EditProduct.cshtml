@@ -1,0 +1,68 @@
+@model ProductFormVm
+@{
+    ViewData["Title"] = "Edit product";
+}
+
+<a asp-action="Products" class="text-muted">← All products</a>
+
+<div class="section-head mt-1">
+    <div>
+        <h2>Edit product</h2>
+        <p class="lead">Update info, stock, or image.</p>
+    </div>
+</div>
+
+<form asp-action="EditProduct" method="post" enctype="multipart/form-data" class="card" style="max-width:760px;">
+    <div class="card-body">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="All" class="alert alert-error" style="display:@(ViewData.ModelState.ErrorCount > 0 ? "block" : "none")"></div>
+
+        @if (!string.IsNullOrEmpty(Model.ExistingImagePath))
+        {
+            <div class="mb-2">
+                <img src="@Model.ExistingImagePath" alt="current" style="width:180px;border-radius:10px;" />
+            </div>
+        }
+
+        <div class="row-2">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input asp-for="Name" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select asp-for="Category" class="form-control">
+                    <option value="Frame">Frame</option>
+                    <option value="Keychain">Keychain</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+        </div>
+        <div class="row-3">
+            <div class="form-group">
+                <label class="form-label">Price (₱)</label>
+                <input asp-for="Price" class="form-control" type="number" step="0.01" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Stock</label>
+                <input asp-for="Stock" class="form-control" type="number" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Active</label>
+                <label class="flex gap-1" style="align-items:center;height:42px;">
+                    <input asp-for="IsActive" type="checkbox" /> Show in shop
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Replace image (optional)</label>
+            <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">Save changes</button>
+        <a asp-action="Products" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>

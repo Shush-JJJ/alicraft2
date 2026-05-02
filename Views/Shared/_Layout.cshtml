@@ -1,0 +1,151 @@
+@inject AppDbContext Db
+@inject CurrentUser CurrentUser
+@{
+    var title = ViewData["Title"] as string;
+    var current = ViewContext.RouteData.Values["controller"] as string;
+    var action  = ViewContext.RouteData.Values["action"] as string;
+    int cartCount = 0;
+    int unreadChat = 0;
+    string? avatarPath = null;
+    string? displayName = null;
+    if (CurrentUser.IsAuthenticated)
+    {
+        var uid = CurrentUser.Id!.Value;
+        cartCount = await Db.CartItems.Where(c => c.UserId == uid).SumAsync(c => (int?)c.Quantity) ?? 0;
+        if (CurrentUser.IsAdmin)
+        {
+            unreadChat = await Db.ChatMessages.CountAsync(m => m.SenderRole == "User" && !m.IsRead);
+        }
+        else
+        {
+            unreadChat = await Db.ChatMessages.CountAsync(m => m.ThreadUserId == uid && m.SenderRole == "Admin" && !m.IsRead);
+        }
+        var me = await Db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == uid);
+        avatarPath = me?.AvatarPath;
+        displayName = me?.Name;
+    }
+    string NavClass(string c, string? a = null) => (current == c && (a == null || action == a)) ? "active" : "";
+    // Highlight an admin nav link only when the current action is one of its own pages
+    string AdminNav(params string[] actions) => (current == "Admin" && actions.Contains(action ?? "", StringComparer.OrdinalIgnoreCase)) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(string.IsNullOrEmpty(title) ? "AliCraft Creations — 3D Lithophane Shop" : title + " · AliCraft Creations")</title>
+    <link rel="icon" type="image/png" href="~/images/logo.png" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        // Apply theme before paint to avoid a light/dark flash (FOUC).
+        (function () {
+            try {
+                var saved = localStorage.getItem('ac-theme');
+                var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if ((saved || (sysDark ? 'dark' : 'light')) === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-inner">
+        <a asp-controller="Home" asp-action="Index" class="brand" aria-label="AliCraft Creations — Home">
+            <img src="~/images/logo.png" alt="AliCraft Creations" />
+        </a>
+        <button class="mobile-toggle" aria-label="Toggle menu">&#9776;</button>
+        <div class="nav-links">
+            <a asp-controller="Home" asp-action="Index" class="@NavClass("Home", "Index")">Home</a>
+            <a asp-controller="Home" asp-action="About" class="@NavClass("Home", "About")">About</a>
+            <a asp-controller="Shop" asp-action="Index" class="@NavClass("Shop")">Shop</a>
+            @if (CurrentUser.IsAuthenticated && !CurrentUser.IsAdmin)
+            {
+                <a asp-controller="Cart" asp-action="Index" class="nav-cart @NavClass("Cart")">
+                    Cart
+                    @if (cartCount > 0) { <span class="badge">@cartCount</span> }
+                </a>
+                <a asp-controller="Orders" asp-action="Index" class="@NavClass("Orders")">Orders</a>
+                <a asp-controller="Chat" asp-action="Index" class="nav-cart @NavClass("Chat")">
+                    Chat
+                    @if (unreadChat > 0) { <span class="badge">@unreadChat</span> }
+                </a>
+            }
+            @if (CurrentUser.IsAdmin)
+            {
+                <a asp-controller="Admin" asp-action="Index" class="@AdminNav("Index")">Dashboard</a>
+                <a asp-controller="Admin" asp-action="Products" class="@AdminNav("Products", "CreateProduct", "EditProduct")">Products</a>
+                <a asp-controller="Admin" asp-action="Orders" class="@AdminNav("Orders", "OrderDetails")">Orders</a>
+                <a asp-controller="Admin" asp-action="Reports" class="@AdminNav("Reports", "ExportOrders")">Reports</a>
+                <a asp-controller="Admin" asp-action="Inbox" class="nav-cart @AdminNav("Inbox")">
+                    Inbox
+                    @if (unreadChat > 0) { <span class="badge">@unreadChat</span> }
+                </a>
+            }
+            @if (CurrentUser.IsAuthenticated)
+            {
+                <a asp-controller="Account" asp-action="Profile" class="nav-user" title="Profile">
+                    @if (!string.IsNullOrEmpty(avatarPath))
+                    {
+                        <img src="@avatarPath" alt="avatar" />
+                    }
+                    else
+                    {
+                        <span class="avatar-letter">@(string.IsNullOrEmpty(displayName) ? "?" : displayName.Substring(0,1).ToUpper())</span>
+                    }
+                    <span>@(displayName ?? "Profile")</span>
+                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="nav-btn btn-ghost" style="background:none;border:0;cursor:pointer;font:inherit;">Logout</button>
+                </form>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login">Login</a>
+                <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-sm">Sign up</a>
+            }
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<main class="container page">
+    @if (TempData["Success"] is string s && !string.IsNullOrEmpty(s))
+    {
+        <div class="alert alert-success" data-auto-dismiss>@s</div>
+    }
+    @if (TempData["Error"] is string e && !string.IsNullOrEmpty(e))
+    {
+        <div class="alert alert-error" data-auto-dismiss>@e</div>
+    }
+    @RenderBody()
+</main>
+
+<footer class="footer">
+    <a asp-controller="Home" asp-action="Index" class="brand footer-brand" aria-label="AliCraft Creations — Home">
+        <img src="~/images/logo.png" alt="AliCraft Creations" />
+    </a>
+    <p class="mt-1 mb-0">© @DateTime.Now.Year AliCraft Creations · Custom 3D Lithophane Crafts · <a asp-controller="Home" asp-action="About">About</a></p>
+</footer>
+
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,207 @@
+@{
+    ViewData["Title"] = "Reports";
+    decimal revenue = (decimal)(ViewBag.TotalRevenue ?? 0m);
+    decimal avg = (decimal)(ViewBag.AvgOrderValue ?? 0m);
+    var statusBreakdown = ViewBag.StatusBreakdown as IEnumerable<dynamic> ?? Array.Empty<dynamic>();
+    var revenueByDay = ViewBag.RevenueByDay as IEnumerable<dynamic> ?? Array.Empty<dynamic>();
+    var topProducts = ViewBag.TopProducts as IEnumerable<dynamic> ?? Array.Empty<dynamic>();
+    var paymentMix = ViewBag.PaymentMix as IEnumerable<dynamic> ?? Array.Empty<dynamic>();
+    var topCustomers = ViewBag.TopCustomers as IEnumerable<dynamic> ?? Array.Empty<dynamic>();
+
+    decimal maxDay = revenueByDay.Any() ? (decimal)revenueByDay.Max(d => (decimal)d.Revenue) : 0m;
+    int maxStatus = statusBreakdown.Any() ? (int)statusBreakdown.Max(s => (int)s.Count) : 0;
+
+    var fromDate = ViewBag.From as DateTime?;
+    var toDate   = ViewBag.To as DateTime?;
+    var preset   = (string?)ViewBag.Preset ?? "";
+    var rangeLabel = (string?)ViewBag.RangeLabel ?? "All time";
+    var bucket   = (string?)ViewBag.RevenueBucket ?? "day";
+
+    string BadgeCls(string s) => s switch
+    {
+        OrderStatus.Pending => "badge-pending",
+        OrderStatus.Processing => "badge-processing",
+        OrderStatus.InTransit => "badge-intransit",
+        OrderStatus.Delivered => "badge-delivered",
+        OrderStatus.Cancelled => "badge-cancelled",
+        _ => ""
+    };
+
+    string PresetCls(string p) => preset == p ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm";
+}
+
+<div class="section-head">
+    <div>
+        <h2>Sales analytics</h2>
+        <p class="lead">@rangeLabel</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline">← Back to dashboard</a>
+</div>
+
+<div class="card mb-2"><div class="card-body">
+    <form asp-action="Reports" method="get" class="flex" style="flex-wrap:wrap;gap:.75rem;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+            <label class="form-label">From</label>
+            <input type="date" name="from" value="@(fromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+            <label class="form-label">To</label>
+            <input type="date" name="to" value="@(toDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a asp-action="Reports" class="btn btn-outline" title="Reset to last 30 days">Reset</a>
+        <a asp-action="ExportOrders"
+           asp-route-from="@(fromDate?.ToString("yyyy-MM-dd"))"
+           asp-route-to="@(toDate?.ToString("yyyy-MM-dd"))"
+           asp-route-preset="@preset"
+           class="btn btn-warm"
+           title="Download orders in this range as CSV (opens in Excel)">📥 Export CSV</a>
+    </form>
+    <div class="flex mt-2" style="flex-wrap:wrap;gap:.4rem;">
+        <span class="text-muted" style="font-size:.85rem;align-self:center;">Quick range:</span>
+        <a asp-action="Reports" asp-route-preset="today" class="@PresetCls("today")">Today</a>
+        <a asp-action="Reports" asp-route-preset="7d"    class="@PresetCls("7d")">Last 7 days</a>
+        <a asp-action="Reports" asp-route-preset="30d"   class="@PresetCls("30d")">Last 30 days</a>
+        <a asp-action="Reports" asp-route-preset="90d"   class="@PresetCls("90d")">Last 90 days</a>
+        <a asp-action="Reports" asp-route-preset="ytd"   class="@PresetCls("ytd")">Year to date</a>
+        <a asp-action="Reports" asp-route-preset="all"   class="@PresetCls("all")">All time</a>
+    </div>
+</div></div>
+
+<div class="stat-grid">
+    <div class="stat purple">
+        <span class="label">Total revenue</span>
+        <span class="value">₱@revenue.ToString("N2")</span>
+        <small class="text-muted">Delivered orders only</small>
+    </div>
+    <div class="stat pink">
+        <span class="label">Delivered orders</span>
+        <span class="value">@ViewBag.DeliveredOrders</span>
+        <small class="text-muted">of @ViewBag.TotalOrders total</small>
+    </div>
+    <div class="stat orange">
+        <span class="label">Avg. order value</span>
+        <span class="value">₱@avg.ToString("N2")</span>
+    </div>
+    <div class="stat cyan">
+        <span class="label">Units sold</span>
+        <span class="value">@ViewBag.TotalUnitsSold</span>
+    </div>
+</div>
+
+<div class="grid-3 mt-3">
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Revenue — @(bucket == "week" ? "by week" : "by day")</h3>
+        <p class="text-muted" style="font-size:.85rem;margin-top:-.5rem;">Delivered orders, @rangeLabel.</p>
+
+        @if (!revenueByDay.Any())
+        {
+            <p class="text-muted">No data in this range.</p>
+        }
+        else
+        {
+            <div style="display:grid;grid-template-columns:repeat(@revenueByDay.Count(), 1fr);gap:6px;align-items:end;height:180px;padding:0 2px;border-bottom:1px solid var(--ac-border);">
+                @foreach (var d in revenueByDay)
+                {
+                    decimal v = (decimal)d.Revenue;
+                    var h = maxDay > 0 ? (int)(v / maxDay * 160m) : 0;
+                    <div title="@(((DateTime)d.Date).ToString("MMM d")) — ₱@v.ToString("N0")"
+                         style="position:relative;width:100%;height:@(Math.Max(h,2))px;background:var(--ac-gradient);border-radius:6px 6px 0 0;">
+                        @if (v > 0)
+                        {
+                            <span style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:700;color:var(--ac-purple);white-space:nowrap;">₱@v.ToString("N0")</span>
+                        }
+                    </div>
+                }
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(@revenueByDay.Count(), 1fr);gap:6px;margin-top:.4rem;">
+                @{ int bucketCount = revenueByDay.Count(); int bucketStep = bucketCount > 14 ? (int)Math.Ceiling(bucketCount / 14.0) : 1; int bIdx = 0; }
+                @foreach (var d in revenueByDay)
+                {
+                    var show = bIdx % bucketStep == 0 || bIdx == bucketCount - 1;
+                    <span style="font-size:.68rem;color:var(--ac-muted);text-align:center;white-space:nowrap;">@(show ? ((DateTime)d.Date).ToString("M/d") : "")</span>
+                    bIdx++;
+                }
+            </div>
+        }
+
+        <h3 class="mt-3">Top products</h3>
+        @if (!topProducts.Any())
+        {
+            <p class="text-muted">No sales yet.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th></tr></thead>
+                <tbody>
+                @{ int idx = 1; }
+                @foreach (var p in topProducts)
+                {
+                    <tr>
+                        <td><strong>#@idx</strong></td>
+                        <td>@p.ProductName</td>
+                        <td>@p.Units</td>
+                        <td>₱@(((decimal)p.Revenue).ToString("N2"))</td>
+                    </tr>
+                    idx++;
+                }
+                </tbody>
+            </table>
+        }
+    </div></div>
+
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Order status</h3>
+        @foreach (var s in statusBreakdown)
+        {
+            var label = (string)s.Status == OrderStatus.InTransit ? "In Transit" : (string)s.Status;
+            int count = (int)s.Count;
+            int pct = maxStatus > 0 ? (int)((double)count / maxStatus * 100) : 0;
+            <div class="mb-1">
+                <div class="flex-between" style="margin-bottom:4px;">
+                    <span class="badge-pill @BadgeCls((string)s.Status)">@label</span>
+                    <strong>@count</strong>
+                </div>
+                <div style="height:8px;background:#f3f4f6;border-radius:999px;overflow:hidden;">
+                    <div style="width:@pct%;height:100%;background:var(--ac-gradient);"></div>
+                </div>
+            </div>
+        }
+
+        <h3 class="mt-3">Payment mix</h3>
+        @if (!paymentMix.Any())
+        {
+            <p class="text-muted">No paid orders yet.</p>
+        }
+        else
+        {
+            @foreach (var p in paymentMix)
+            {
+                <div class="flex-between mb-1">
+                    <span><strong>@p.Method</strong> · @p.Count order(s)</span>
+                    <span>₱@(((decimal)p.Revenue).ToString("N2"))</span>
+                </div>
+            }
+        }
+
+        <h3 class="mt-3">Top customers</h3>
+        @if (!topCustomers.Any())
+        {
+            <p class="text-muted">No customers yet.</p>
+        }
+        else
+        {
+            @foreach (var c in topCustomers)
+            {
+                <div class="flex-between mb-1">
+                    <span>
+                        <strong>@c.Name</strong><br/>
+                        <small class="text-muted">@c.Orders order(s) · @c.Email</small>
+                    </span>
+                    <strong style="color:var(--ac-pink)">₱@(((decimal)c.Revenue).ToString("N2"))</strong>
+                </div>
+            }
+        }
+    </div></div>
+</div>

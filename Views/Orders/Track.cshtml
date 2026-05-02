@@ -1,0 +1,54 @@
+@model Order
+@{
+    ViewData["Title"] = "Track " + Model.OrderNumber;
+}
+
+<a asp-action="Index" class="text-muted">← All orders</a>
+
+<div class="section-head mt-1">
+    <div>
+        <h2>Tracking @Model.OrderNumber</h2>
+        <p class="lead">Current status: <strong>@(Model.Status == OrderStatus.InTransit ? "In Transit" : Model.Status)</strong></p>
+    </div>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline">View details →</a>
+</div>
+
+@await Html.PartialAsync("_Tracker", Model)
+
+<div class="card mt-3"><div class="card-body">
+    <h3 class="mt-0">Timeline</h3>
+    <ul style="list-style:none;padding:0;margin:0;">
+        <li class="flex-between mb-1">
+            <span><strong>📝 Order placed</strong> — thanks for shopping with us!</span>
+            <span class="text-muted">@Model.CreatedAt.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+        </li>
+        @if (Model.ProcessingAt.HasValue)
+        {
+            <li class="flex-between mb-1">
+                <span><strong>🔨 Processing</strong> — we're crafting your order.</span>
+                <span class="text-muted">@Model.ProcessingAt.Value.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+            </li>
+        }
+        @if (Model.InTransitAt.HasValue)
+        {
+            <li class="flex-between mb-1">
+                <span><strong>🚚 In Transit</strong> — your order is on the way.</span>
+                <span class="text-muted">@Model.InTransitAt.Value.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+            </li>
+        }
+        @if (Model.DeliveredAt.HasValue)
+        {
+            <li class="flex-between mb-1">
+                <span><strong>✅ Delivered</strong> — enjoy your lithophane!</span>
+                <span class="text-muted">@Model.DeliveredAt.Value.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+            </li>
+        }
+        @if (Model.CancelledAt.HasValue)
+        {
+            <li class="flex-between mb-1">
+                <span><strong>❌ Cancelled</strong></span>
+                <span class="text-muted">@Model.CancelledAt.Value.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+            </li>
+        }
+    </ul>
+</div></div>

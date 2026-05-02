@@ -1,0 +1,30 @@
+@model Order
+@{
+    var idx = Array.IndexOf(OrderStatus.Flow, Model.Status);
+    var isCancelled = Model.Status == OrderStatus.Cancelled;
+    var steps = new[] {
+        ("Pending",    "📝", Model.CreatedAt),
+        ("Processing", "🔨", Model.ProcessingAt ?? default),
+        ("InTransit",  "🚚", Model.InTransitAt  ?? default),
+        ("Delivered",  "✅", Model.DeliveredAt  ?? default)
+    };
+}
+<div class="tracker @(isCancelled ? "cancelled" : "")">
+    @for (int i = 0; i < steps.Length; i++)
+    {
+        var (name, icon, at) = steps[i];
+        var label = name == "InTransit" ? "In Transit" : name;
+        var cls = isCancelled
+            ? ""
+            : i < idx ? "done" : i == idx ? "current" : "";
+        <div class="step @cls">
+            <div class="dot">@icon</div>
+            <div class="label">@label</div>
+            <div class="time">@(at == default ? "—" : at.ToLocalTime().ToString("MMM d"))</div>
+        </div>
+    }
+</div>
+@if (isCancelled)
+{
+    <div class="alert alert-error mt-1">This order was cancelled on @Model.CancelledAt?.ToLocalTime().ToString("MMM d, yyyy").</div>
+}

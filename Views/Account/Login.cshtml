@@ -1,0 +1,52 @@
+@model LoginVm
+@{
+    ViewData["Title"] = "Log in";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+    var unverified = ViewBag.UnverifiedEmail as string;
+}
+
+<section class="card">
+    <div class="auth-shell" style="min-height:auto;">
+        <div class="auth-hero">
+            <img src="~/images/logo.png" alt="AliCraft" style="height:80px;margin-bottom:1rem;" />
+            <h1>Welcome back.</h1>
+            <p>Log in to place orders, track shipments, and chat with our craftsman.</p>
+        </div>
+        <div class="auth-form-wrap">
+            <form asp-action="Login" method="post" class="auth-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <h2>Log in</h2>
+                <p class="lead">New to AliCraft? <a asp-action="Register">Create an account</a>.</p>
+                <div asp-validation-summary="ModelOnly" class="alert alert-error mb-2" style="display:@(ViewData.ModelState.ErrorCount > 0 ? "block" : "none")"></div>
+                @if (!string.IsNullOrEmpty(unverified))
+                {
+                    <div class="alert alert-warning mb-2">
+                        Your account isn't verified yet.
+                        <a asp-action="ResendVerification" asp-route-email="@unverified"><strong>Resend verification email</strong></a>
+                    </div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Email" class="form-control" placeholder="you@email.com" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input asp-for="Password" class="form-control" type="password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+                <label class="flex gap-1" style="align-items:center;font-weight:500;">
+                    <input asp-for="Remember" type="checkbox" /> Remember me
+                </label>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block mt-2">Log in</button>
+
+                <p class="text-center mt-2 mb-0">
+                    <a asp-action="ForgotPassword">Forgot your password?</a>
+                </p>
+            </form>
+        </div>
+    </div>
+</section>

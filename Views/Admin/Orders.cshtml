@@ -1,0 +1,55 @@
+@model IEnumerable<Order>
+@{
+    ViewData["Title"] = "Orders (admin)";
+    var status = ViewBag.Status as string;
+    var q = ViewBag.Query as string;
+    string[] filters = { "All", "Pending", "Processing", "InTransit", "Delivered", "Cancelled" };
+}
+
+<div class="section-head">
+    <div>
+        <h2>Orders</h2>
+        <p class="lead">@Model.Count() order(s) · status: @(status == "InTransit" ? "In Transit" : status)</p>
+    </div>
+    <form method="get" class="flex gap-1">
+        <input type="text" name="q" value="@q" class="form-control" placeholder="Order # or email…" />
+        <input type="hidden" name="status" value="@status" />
+        <button class="btn btn-outline">Find</button>
+    </form>
+</div>
+
+<div class="chips">
+    @foreach (var f in filters)
+    {
+        var label = f == "InTransit" ? "In Transit" : f;
+        <a asp-action="Orders" asp-route-status="@(f == "All" ? null : f)" asp-route-q="@q" class="chip @(status == f ? "active" : "")">@label</a>
+    }
+</div>
+
+<table class="table">
+    <thead><tr><th>Order #</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var o in Model)
+    {
+        var cls = o.Status switch {
+            OrderStatus.Pending => "badge-pending",
+            OrderStatus.Processing => "badge-processing",
+            OrderStatus.InTransit => "badge-intransit",
+            OrderStatus.Delivered => "badge-delivered",
+            OrderStatus.Cancelled => "badge-cancelled",
+            _ => ""
+        };
+        var lbl = o.Status == OrderStatus.InTransit ? "In Transit" : o.Status;
+        <tr>
+            <td><strong>@o.OrderNumber</strong></td>
+            <td>@o.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+            <td>@o.User?.Name<br/><small class="text-muted">@o.User?.Email</small></td>
+            <td>@o.Items.Sum(i => i.Quantity)</td>
+            <td>₱@o.Total.ToString("N2")</td>
+            <td>@o.PaymentMethod</td>
+            <td><span class="badge-pill @cls">@lbl</span></td>
+            <td class="actions"><a asp-action="OrderDetails" asp-route-id="@o.Id" class="btn btn-outline btn-sm">Manage</a></td>
+        </tr>
+    }
+    </tbody>
+</table>

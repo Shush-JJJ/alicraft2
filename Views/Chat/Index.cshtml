@@ -1,0 +1,89 @@
+@model IEnumerable<ChatMessage>
+@inject CurrentUser CurrentUser
+@{
+    ViewData["Title"] = "Chat";
+    var myId = CurrentUser.Id;
+}
+
+<div class="section-head">
+    <div>
+        <h2>Chat with AliCraft Admin</h2>
+        <p class="lead">Ask about customizations, shipping, or anything. We reply as fast as we can.</p>
+    </div>
+</div>
+
+<div class="chat" id="chat" data-endpoint="/Chat/Poll" data-send-url="/Chat/Send" data-as-user="true">
+    <div class="chat-messages" id="chatMessages">
+        @foreach (var m in Model)
+        {
+            var me = m.SenderRole == "User" && m.SenderId == myId;
+            <div class="chat-row @(me ? "me" : "")" data-id="@m.Id">
+                <div class="bubble">
+                    @if (!string.IsNullOrEmpty(m.Body)) { @m.Body }
+                    @if (!string.IsNullOrEmpty(m.ImagePath)) { <a href="@m.ImagePath" target="_blank"><img src="@m.ImagePath" alt="attachment" /></a> }
+                    <div class="meta">@m.CreatedAt.ToLocalTime().ToString("MMM d · h:mm tt")</div>
+                </div>
+            </div>
+        }
+        @if (!Model.Any())
+        {
+            <div class="text-center text-muted mt-3" id="emptyHint">
+                Say hi! Send us your first message below.
+            </div>
+        }
+    </div>
+
+    <form asp-controller="Chat" asp-action="Send" method="post" enctype="multipart/form-data" class="chat-input" id="chatForm">
+        @Html.AntiForgeryToken()
+        <label class="icon-btn" title="Attach image" for="chatImage">📎</label>
+        <input id="chatImage" type="file" name="image" accept="image/*" />
+        <textarea name="body" id="chatBody" class="form-control" placeholder="Type a message…" rows="1"></textarea>
+        <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        var box = document.getElementById('chatMessages');
+        var chat = document.getElementById('chat');
+        var endpoint = chat.getAttribute('data-endpoint');
+        function scrollBottom() { box.scrollTop = box.scrollHeight; }
+        scrollBottom();
+        var last = @(Model.Any() ? new DateTimeOffset(Model.Max(m => m.CreatedAt), TimeSpan.Zero).ToUnixTimeMilliseconds() : 0);
+        function poll() {
+            fetch(endpoint + '?since=' + last)
+                .then(function (r) { return r.json(); })
+                .then(function (items) {
+                    if (!items || items.length === 0) return;
+                    var emptyHint = document.getElementById('emptyHint');
+                    if (emptyHint) emptyHint.remove();
+                    items.forEach(function (m) {
+                        if (document.querySelector('[data-id="' + m.id + '"]')) return;
+                        var row = document.createElement('div');
+                        row.className = 'chat-row' + (m.role === 'User' ? ' me' : '');
+                        row.setAttribute('data-id', m.id);
+                        var html = '<div class="bubble">';
+                        if (m.body) html += escapeHtml(m.body);
+                        if (m.image) html += '<a href="' + m.image + '" target="_blank"><img src="' + m.image + '" alt="attachment"/></a>';
+                        html += '<div class="meta">' + new Date(m.at).toLocaleString() + '</div></div>';
+                        row.innerHTML = html;
+                        box.appendChild(row);
+                        last = Math.max(last, m.at);
+                    });
+                    scrollBottom();
+                });
+        }
+        function escapeHtml(s) { return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }).replace(/\n/g, '<br/>'); }
+        setInterval(poll, 2500);
+
+        var ta = document.getElementById('chatBody');
+        ta.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('chatForm').submit();
+            }
+        });
+    })();
+</script>
+}

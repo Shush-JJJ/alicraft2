@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Admin dashboard";
+    var recent = ViewBag.RecentOrders as IEnumerable<Order> ?? Enumerable.Empty<Order>();
+    decimal revenue = (decimal)(ViewBag.TotalRevenue ?? 0m);
+}
+
+<div class="section-head">
+    <div>
+        <h2>Dashboard</h2>
+        <p class="lead">AliCraft Creations — admin control center</p>
+    </div>
+    <div class="flex gap-1">
+        <a asp-action="CreateProduct" class="btn btn-primary">+ New product</a>
+        <a asp-action="Orders" class="btn btn-outline">Manage orders</a>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat orange"><span class="label">Products</span><span class="value">@ViewBag.TotalProducts</span><small class="text-muted">@ViewBag.ActiveProducts active</small></div>
+    <div class="stat cyan"><span class="label">Customers</span><span class="value">@ViewBag.TotalUsers</span></div>
+    <div class="stat pink"><span class="label">Orders</span><span class="value">@ViewBag.TotalOrders</span></div>
+    <div class="stat purple"><span class="label">Revenue (delivered)</span><span class="value">₱@revenue.ToString("N0")</span></div>
+    <div class="stat blue"><span class="label">Unread messages</span><span class="value">@ViewBag.UnreadMessages</span><a asp-action="Inbox" style="font-size:.82rem;">Open inbox →</a></div>
+</div>
+
+<div class="grid-3 mt-3">
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Order pipeline</h3>
+        <div class="stat-grid">
+            <div class="stat"><span class="label">Pending</span><span class="value">@ViewBag.PendingOrders</span></div>
+            <div class="stat"><span class="label">Processing</span><span class="value">@ViewBag.ProcessingOrders</span></div>
+            <div class="stat"><span class="label">In Transit</span><span class="value">@ViewBag.InTransitOrders</span></div>
+            <div class="stat"><span class="label">Delivered</span><span class="value">@ViewBag.DeliveredOrders</span></div>
+        </div>
+
+        <h3 class="mt-3">Recent orders</h3>
+        @if (!recent.Any())
+        {
+            <p class="text-muted">No orders yet.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var o in recent)
+                {
+                    var cls = o.Status switch {
+                        OrderStatus.Pending => "badge-pending",
+                        OrderStatus.Processing => "badge-processing",
+                        OrderStatus.InTransit => "badge-intransit",
+                        OrderStatus.Delivered => "badge-delivered",
+                        OrderStatus.Cancelled => "badge-cancelled",
+                        _ => ""
+                    };
+                    var lbl = o.Status == OrderStatus.InTransit ? "In Transit" : o.Status;
+                    <tr>
+                        <td><strong>@o.OrderNumber</strong><br/><small class="text-muted">@o.CreatedAt.ToLocalTime().ToString("MMM d")</small></td>
+                        <td>@o.User?.Name<br/><small class="text-muted">@o.User?.Email</small></td>
+                        <td>₱@o.Total.ToString("N2")</td>
+                        <td><span class="badge-pill @cls">@lbl</span></td>
+                        <td class="actions"><a asp-action="OrderDetails" asp-route-id="@o.Id" class="btn btn-outline btn-sm">Open</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div></div>
+
+    <div class="card"><div class="card-body">
+        <h3 class="mt-0">Quick links</h3>
+        <div class="flex-col gap-1">
+            <a asp-action="Products" class="btn btn-outline btn-block">📦 Products</a>
+            <a asp-action="Orders" class="btn btn-outline btn-block">📋 Orders</a>
+            <a asp-action="Reports" class="btn btn-outline btn-block">📊 Reports</a>
+            <a asp-action="Inbox" class="btn btn-outline btn-block">💬 Inbox</a>
+            <a asp-action="Users" class="btn btn-outline btn-block">👥 Customers</a>
+        </div>
+        <hr class="mt-3"/>
+        <p class="text-muted mb-0" style="font-size:.85rem;">Admin credentials are seeded on first run:<br/><code>admin@alicraft.com</code></p>
+    </div></div>
+</div>

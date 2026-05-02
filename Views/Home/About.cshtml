@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "About";
+}
+<section class="hero">
+    <div class="hero-grid">
+        <div>
+            <h1>About AliCraft Creations</h1>
+            <p>We're a Filipino-made craft studio specializing in personalized 3D lithophane gifts — where memory meets light.</p>
+            <div class="hero-actions">
+                <a asp-controller="Shop" asp-action="Index" class="btn btn-primary btn-lg">Shop the collection</a>
+                <a asp-controller="Chat" asp-action="Index" class="btn btn-warm btn-lg">Chat with us</a>
+            </div>
+        </div>
+        <div class="hero-img-wrap text-center">
+            <img src="~/images/logo.png" alt="AliCraft logo" />
+        </div>
+    </div>
+</section>
+
+<div class="row-2 mt-3">
+    <div class="card"><div class="card-body">
+        <h2>Our craft</h2>
+        <p class="text-muted">A lithophane is a 3D etching that reveals an image when back-lit. We combine traditional handcraft with modern 3D printing to turn your photos into keepsakes that literally glow.</p>
+        <p class="text-muted">Each order is hand-finished in our home studio in the Philippines — from sanding to framing to the final QA.</p>
+    </div></div>
+    <div class="card"><div class="card-body">
+        <h2>How ordering works</h2>
+        <ol>
+            <li>Pick a frame or keychain from our shop.</li>
+            <li>Add to cart, then checkout with GCash or cash on delivery.</li>
+            <li>Upload your photo or chat with us to customize details.</li>
+            <li>Track your order: <strong>Pending → Processing → In Transit → Delivered.</strong></li>
+        </ol>
+    </div></div>
+</div>
+
+<div class="card mt-3"><div class="card-body">
+    <h2>Contact us</h2>
+    <p class="text-muted">Got a question or a special request? Sign in and chat with our admin directly — we reply personally to every message.</p>
+    <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Login to chat</a>
+</div></div>
