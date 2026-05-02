@@ -13,7 +13,7 @@ public class ShopController : Controller
     public async Task<IActionResult> Index(string? category, string? q, string? sort)
     {
         IQueryable<Product> query = _db.Products.Where(p => p.IsActive);
-        if (!string.IsNullOrWhiteSpace(category))
+        if (!string.IsNullOrWhiteSpace(category) && category != "All")
             query = query.Where(p => p.Category == category);
         if (!string.IsNullOrWhiteSpace(q))
         {

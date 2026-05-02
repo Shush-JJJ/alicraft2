@@ -1,5 +1,0 @@
-=== status ===
- M Controllers/ShopController.cs
- M Views/Shop/Index.cshtml
- M pl.txt
-=== add ===

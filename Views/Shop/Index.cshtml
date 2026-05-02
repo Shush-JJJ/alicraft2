@@ -22,7 +22,7 @@
     </div>
     <form method="get" class="flex gap-1" style="max-width:420px;">
         <input type="text" name="q" value="@q" class="form-control" placeholder="Search…" />
-        <input type="hidden" name="category" value="@category" />
+        <input type="hidden" name="category" value="@(category == "All" ? "" : category)" />
         <select name="sort" class="form-control" onchange="this.form.submit()" style="max-width:160px;">
             <option value="newest"     selected="@(sort == "newest" ? "selected" : null)">Newest</option>
             <option value="price-asc"  selected="@(sort == "price-asc" ? "selected" : null)">Price ↑</option>
