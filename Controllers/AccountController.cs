@@ -22,15 +22,23 @@ public class AccountController : Controller
     private readonly IWebHostEnvironment _env;
     private readonly IEmailService _email;
     private readonly ILogger<AccountController> _log;
+    private readonly IConfiguration _config;
 
-    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email, ILogger<AccountController> log)
+    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email, ILogger<AccountController> log, IConfiguration config)
     {
         _db = db;
         _current = current;
         _env = env;
         _email = email;
         _log = log;
+        _config = config;
     }
+
+    // When true (default), new accounts must click a verification link before logging in.
+    // Override to false on hosts where email delivery is unreliable (e.g. Render free tier
+    // with Brevo blocklisting) by setting env var: Account__RequireEmailVerification=false
+    private bool RequireEmailVerification =>
+        _config.GetValue("Account:RequireEmailVerification", true);
 
     // ---------- REGISTER ----------
     [HttpGet]
@@ -55,6 +63,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        var requireVerify = RequireEmailVerification;
         var user = new User
         {
             Name = vm.Name.Trim(),
@@ -67,13 +76,20 @@ public class AccountController : Controller
             Barangay = vm.Barangay,
             Street = vm.Street,
             PostalCode = vm.PostalCode,
-            IsEmailVerified = false,
-            EmailVerificationToken = NewToken(),
-            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
-            EmailVerificationLastSentAt = DateTime.UtcNow
+            IsEmailVerified = !requireVerify,
+            EmailVerificationToken = requireVerify ? NewToken() : null,
+            EmailVerificationTokenExpiresAt = requireVerify ? DateTime.UtcNow.AddHours(24) : null,
+            EmailVerificationLastSentAt = requireVerify ? DateTime.UtcNow : (DateTime?)null
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
+
+        // Demo mode: verification disabled. Account is already verified, skip the email.
+        if (!requireVerify)
+        {
+            TempData["Success"] = $"Account created for {user.Email}. You can log in now.";
+            return RedirectToAction(nameof(Login));
+        }
 
         var (sent, sendError) = await SendVerificationEmailAsync(user);
 
@@ -226,7 +242,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        if (!user.IsEmailVerified)
+        if (RequireEmailVerification && !user.IsEmailVerified)
         {
             ViewBag.UnverifiedEmail = user.Email;
             ModelState.AddModelError(string.Empty, "Please verify your email before logging in. Check your inbox for the verification link.");
