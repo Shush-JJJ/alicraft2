@@ -136,6 +136,10 @@
     {
         <div class="alert alert-error" data-auto-dismiss>@e</div>
     }
+    @if (TempData["Warning"] is string w && !string.IsNullOrEmpty(w))
+    {
+        <div class="alert alert-warning">@Html.Raw(w)</div>
+    }
     @RenderBody()
 </main>
 

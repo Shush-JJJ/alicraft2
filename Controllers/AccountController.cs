@@ -21,13 +21,15 @@ public class AccountController : Controller
     private readonly CurrentUser _current;
     private readonly IWebHostEnvironment _env;
     private readonly IEmailService _email;
+    private readonly ILogger<AccountController> _log;
 
-    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email)
+    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email, ILogger<AccountController> log)
     {
         _db = db;
         _current = current;
         _env = env;
         _email = email;
+        _log = log;
     }
 
     // ---------- REGISTER ----------
@@ -73,9 +75,21 @@ public class AccountController : Controller
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        await SendVerificationEmailAsync(user);
+        var (sent, sendError) = await SendVerificationEmailAsync(user);
 
-        TempData["Success"] = $"We sent a verification link to {user.Email}. Please check your inbox to activate your account.";
+        if (sent)
+        {
+            TempData["Success"] = $"We sent a verification link to {user.Email}. Please check your inbox (and Spam folder) to activate your account.";
+        }
+        else
+        {
+            _log.LogError("Verification email send failed for {Email}: {Error}", user.Email, sendError);
+            var resendUrl = Url.Action(nameof(ResendVerification), new { email = user.Email });
+            TempData["Warning"] =
+                $"Your account was created, but we couldn't send the verification email right now. " +
+                $"Reason: <code>{System.Net.WebUtility.HtmlEncode(sendError ?? "unknown error")}</code>. " +
+                $"You can <a href=\"{resendUrl}\">click here to resend</a> in a moment.";
+        }
         return RedirectToAction(nameof(VerifyEmailSent), new { email = user.Email });
     }
 
@@ -157,15 +171,20 @@ public class AccountController : Controller
                 user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24);
                 user.EmailVerificationLastSentAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                await SendVerificationEmailAsync(user);
+                var (sent, sendError) = await SendVerificationEmailAsync(user);
+                if (!sent)
+                {
+                    _log.LogError("Resend verification failed for {Email}: {Error}", user.Email, sendError);
+                    result.Message = $"We couldn't send the verification email. Reason: {sendError}. Please try again in a minute.";
+                }
             }
         }
         return View("ResendVerification", result);
     }
 
-    private async Task SendVerificationEmailAsync(User user)
+    private async Task<(bool ok, string? error)> SendVerificationEmailAsync(User user)
     {
-        if (string.IsNullOrEmpty(user.EmailVerificationToken)) return;
+        if (string.IsNullOrEmpty(user.EmailVerificationToken)) return (false, "missing token");
         var baseUrl = _email.BaseUrl;
         var link = $"{baseUrl}/Account/VerifyEmail?token={Uri.EscapeDataString(user.EmailVerificationToken)}";
         var html = $@"<!doctype html><html><body style='font-family:Arial,sans-serif;background:#f7f7f9;padding:24px;'>
@@ -180,7 +199,7 @@ public class AccountController : Controller
   <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0;'>
   <p style='font-size:12px;color:#9ca3af;text-align:center;'>AliCraft Creations &middot; Custom 3D Lithophane Crafts</p>
 </div></body></html>";
-        await _email.SendAsync(user.Email, user.Name, "Confirm your AliCraft email", html);
+        return await _email.TrySendAsync(user.Email, user.Name, "Confirm your AliCraft email", html);
     }
 
     private static string NewToken() => Convert.ToBase64String(Guid.NewGuid().ToByteArray()).TrimEnd('=').Replace('+', '-').Replace('/', '_');
