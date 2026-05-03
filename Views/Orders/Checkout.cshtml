@@ -44,7 +44,8 @@
                 <div class="form-group">
                     <label class="form-label">Province</label>
                     <select asp-for="ShippingProvince" id="Province" class="form-control"
-                            data-province="true" data-city-target="City"></select>
+                            data-province="true" data-city-target="City"
+                            data-preset="@Model.ShippingProvince"></select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">City / Municipality</label>
@@ -76,7 +77,7 @@
             <div class="pay-options">
                 <label>
                     <input type="radio" asp-for="PaymentMethod" value="GCash" checked />
-                    <div class="pay-icon" style="background:linear-gradient(135deg,#22B6D2,#2196F3);">G</div>
+                    <img src="~/images/Gcash.png" alt="GCash" class="pay-icon pay-icon-img" />
                     <div class="pay-label">
                         <strong>GCash</strong><br/>
                         <small class="text-muted">Pay now, enter reference</small>
@@ -84,7 +85,7 @@
                 </label>
                 <label>
                     <input type="radio" asp-for="PaymentMethod" value="PayMaya" />
-                    <div class="pay-icon" style="background:linear-gradient(135deg,#16a34a,#0ea5e9);">M</div>
+                    <img src="~/images/Paymaya.png" alt="Maya" class="pay-icon pay-icon-img" />
                     <div class="pay-label">
                         <strong>PayMaya / Maya</strong><br/>
                         <small class="text-muted">Pay now, enter reference</small>
@@ -92,7 +93,7 @@
                 </label>
                 <label>
                     <input type="radio" asp-for="PaymentMethod" value="COD" />
-                    <div class="pay-icon" style="background:var(--ac-gradient-warm);">₱</div>
+                    <img src="~/images/COD.png" alt="Cash on Delivery" class="pay-icon pay-icon-img" />
                     <div class="pay-label">
                         <strong>Cash on Delivery</strong><br/>
                         <small class="text-muted">Pay the courier in cash</small>
@@ -101,7 +102,7 @@
             </div>
 
             <div id="gcashPanel" class="payPanel mt-2">
-                <div class="card" style="background:#f9fafb;"><div class="card-body">
+                <div class="card pay-note pay-note-gcash"><div class="card-body">
                     <strong>GCash instructions</strong>
                     <p class="text-muted mt-1 mb-1">Send the total amount to <strong>0917-123-4567 (AliCraft)</strong>, then enter your GCash reference number and/or upload a screenshot below.</p>
                 </div></div>
@@ -118,7 +119,7 @@
             </div>
 
             <div id="paymayaPanel" class="payPanel mt-2" style="display:none;">
-                <div class="card" style="background:#f0fdf4;border-color:#86efac;"><div class="card-body">
+                <div class="card pay-note pay-note-maya"><div class="card-body">
                     <strong>PayMaya / Maya instructions</strong>
                     <p class="text-muted mt-1 mb-1">Send the total amount to Maya <strong>0917-987-6543 (AliCraft)</strong>, then enter your Maya reference number and/or upload a screenshot below.</p>
                 </div></div>
@@ -135,7 +136,7 @@
             </div>
 
             <div id="codPanel" class="payPanel mt-2" style="display:none;">
-                <div class="card" style="background:#fffbeb;border-color:#fde68a;"><div class="card-body">
+                <div class="card pay-note pay-note-cod"><div class="card-body">
                     <strong>Cash on Delivery</strong>
                     <p class="text-muted mt-1 mb-0">Pay the rider in cash on delivery. Please prepare the exact amount when possible.</p>
                 </div></div>

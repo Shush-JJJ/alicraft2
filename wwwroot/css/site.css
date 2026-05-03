@@ -325,22 +325,52 @@ textarea.form-control { min-height: 96px; resize: vertical; }
 .cart-item .qty input { width: 55px; text-align: center; }
 
 /* ---------- Chat ---------- */
+.chat-header {
+    padding: .55rem 1.25rem; border-bottom: 1px solid var(--ac-border);
+    background: #f3f0f6; display: flex; align-items: center; justify-content: space-between;
+    flex: 0 0 auto;
+}
+.chat-header h2 { font-size: 1.05rem; line-height: 1.2; margin: 0; }
+.chat-header small { display: block; font-size: .78rem; }
+.chat-header-identity { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.chat-header-logo {
+    height: 44px; width: 44px; object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.15));
+    flex: 0 0 auto;
+}
 .chat {
-    display: grid; grid-template-rows: 1fr auto; height: 75vh;
+    display: grid; grid-template-rows: 1fr auto; height: 65vh; min-height: 380px;
     border: 1px solid var(--ac-border); border-radius: var(--radius);
     background: #fff; overflow: hidden;
 }
-.chat-messages { overflow-y: auto; padding: 1rem; background: #f9fafb; }
-.chat-row { display: flex; margin-bottom: .6rem; }
+/* min-height:0 lets the messages area shrink inside the bounded chat grid so
+   overflow-y:auto actually engages instead of pushing the parent taller. */
+.chat-messages {
+    overflow-y: auto; padding: .75rem 1rem; background: #e8e4ef;
+    display: flex; flex-direction: column; gap: .05rem; min-height: 0;
+}
+.chat-row { display: flex; }
 .chat-row.me { justify-content: flex-end; }
+.bubble-wrap { display: flex; flex-direction: column; max-width: 60%; min-width: 0; }
+.chat-row.me     .bubble-wrap { align-items: flex-end; }
+.chat-row:not(.me) .bubble-wrap { align-items: flex-start; }
 .bubble {
-    max-width: 72%; padding: .65rem .9rem; border-radius: 16px;
-    background: #fff; border: 1px solid var(--ac-border); word-wrap: break-word;
-    box-shadow: var(--shadow-sm); white-space: pre-wrap;
+    width: max-content; max-width: 100%;
+    padding: .4rem .85rem; border-radius: 14px;
+    background: #f6f1fb; border: 1px solid #dcd3e8; color: #2a1e3f;
+    word-wrap: break-word; overflow-wrap: anywhere;
+    box-shadow: 0 1px 2px rgba(91, 45, 155, .08);
+    white-space: pre-wrap; line-height: 1.3;
 }
 .chat-row.me .bubble { background: var(--ac-gradient); color: #fff; border-color: transparent; }
-.bubble .meta { font-size: .72rem; opacity: .7; margin-top: .2rem; }
 .bubble img { max-width: 100%; border-radius: 10px; margin-top: .25rem; display: block; }
+.bubble-wrap .meta {
+    font-size: .68rem; opacity: .55; margin-top: .1rem; padding: 0 .35rem;
+    color: var(--ac-muted); white-space: nowrap;
+}
+@media (max-width: 720px) {
+    .bubble-wrap { max-width: 80%; }
+}
 .chat-input {
     display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--ac-border); background: #fff;
     align-items: center;
@@ -418,6 +448,26 @@ textarea.form-control { min-height: 96px; resize: vertical; }
 }
 .footer .brand { justify-content: center; }
 
+/* ---------- Full-bleed page (e.g., chat) ---------- */
+/* Pages that opt in via ViewBag.LayoutFull = true become a single screen
+   between navbar and viewport bottom. Footer is hidden, container takes full
+   width, the chat itself stretches to fill remaining space, and overflow
+   scrolls inside the chat instead of the whole page. */
+body.is-fullbleed { height: 100vh; overflow: hidden; }
+body.is-fullbleed main.container.page {
+    max-width: none; padding: 0;
+    display: flex; flex-direction: column;
+    /* Exactly fill the space below the sticky navbar. Bounded height (not min)
+       so children with overflow:auto can actually scroll. */
+    height: calc(100vh - 72px);
+}
+body.is-fullbleed main.container.page > .alert { margin: .75rem 1.25rem; flex: 0 0 auto; }
+body.is-fullbleed .chat {
+    flex: 1 1 auto; height: auto; min-height: 0;
+    border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0;
+}
+body.is-fullbleed .footer { display: none; }
+
 /* ---------- Utilities ---------- */
 .text-center { text-align: center; }
 .text-right { text-align: right; }
@@ -464,7 +514,58 @@ textarea.form-control { min-height: 96px; resize: vertical; }
 .pay-options input[type=radio]:checked + .pay-label { color: var(--ac-purple); }
 .pay-options label:has(input:checked) { border-color: var(--ac-purple); background: #faf5ff; }
 .pay-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--ac-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.pay-icon.pay-icon-img { width: 40px; height: 40px; border-radius: 10px; background: transparent; object-fit: contain; }
 @media (max-width: 640px) { .pay-options { grid-template-columns: 1fr; } }
+
+/* Payment instruction notes (the GCash / Maya / COD info card under pay options).
+   These override the default .card white background with subtle tinted surfaces so
+   the cards remain readable in both light and dark themes. */
+.pay-note { background: #f7fafc; border: 1px solid var(--ac-border); }
+.pay-note-gcash { background: #eff6ff; border-color: #bfdbfe; }
+.pay-note-maya  { background: #ecfdf5; border-color: #a7f3d0; }
+.pay-note-cod   { background: #fffbeb; border-color: #fde68a; }
+.pay-note .card-body { color: var(--ac-text); }
+
+/* ---------- File input enhancer ---------- */
+/* The native <input type="file"> is hidden but kept focusable so form submission
+   works. A styled button is shown initially; once a file is chosen, the button
+   is hidden and the filename + X remove button appear in its place. */
+.file-enh { display: inline-flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.file-enh-input {
+    position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.file-enh-btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem .9rem; border-radius: 10px; border: 1px dashed var(--ac-border);
+    background: #f8f5fc; color: var(--ac-purple); cursor: pointer; font: inherit;
+    transition: border-color .15s, background .15s;
+}
+.file-enh-btn:hover { border-color: var(--ac-purple); background: #f1e9fa; }
+.file-enh-btn svg { flex: 0 0 auto; }
+.file-enh-chosen {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .4rem .6rem .4rem .85rem; border-radius: 999px;
+    background: #ede6f7; color: var(--ac-purple-dark, #4c2a72);
+    max-width: 100%;
+}
+.file-enh-name {
+    font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 28ch;
+}
+.file-enh-remove {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; border: 0;
+    background: rgba(122, 63, 165, .18); color: var(--ac-purple);
+    cursor: pointer; padding: 0; flex: 0 0 auto;
+}
+.file-enh-remove:hover { background: rgba(122, 63, 165, .35); }
+
+[data-theme="dark"] .file-enh-btn { background: #1b2030; border-color: var(--ac-border); color: #ddd6fe; }
+[data-theme="dark"] .file-enh-btn:hover { background: #232838; border-color: var(--ac-purple); }
+[data-theme="dark"] .file-enh-chosen { background: #2a1e3f; color: #ddd6fe; }
+[data-theme="dark"] .file-enh-remove { background: rgba(221,214,254,.18); color: #ddd6fe; }
+[data-theme="dark"] .file-enh-remove:hover { background: rgba(221,214,254,.32); }
 
 /* ===================================================================
    THEME TOGGLE BUTTON (top-right of navbar)
@@ -588,9 +689,12 @@ textarea.form-control { min-height: 96px; resize: vertical; }
 [data-theme="dark"] .table tbody tr:hover { background: #1b202c; }
 
 /* Chat */
+[data-theme="dark"] .chat-header { background: #1b2030; border-bottom-color: var(--ac-border); color: var(--ac-dark); }
+[data-theme="dark"] .chat-header-logo { filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
 [data-theme="dark"] .chat { background: var(--ac-card); border-color: var(--ac-border); }
 [data-theme="dark"] .chat-messages { background: #131722; }
-[data-theme="dark"] .bubble { background: #1b2030; border-color: var(--ac-border); color: var(--ac-dark); }
+[data-theme="dark"] .bubble { background: #232a3c; border-color: #343b50; color: var(--ac-dark); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+[data-theme="dark"] .bubble-wrap .meta { color: var(--ac-muted); }
 [data-theme="dark"] .chat-input { background: var(--ac-card); border-top-color: var(--ac-border); }
 [data-theme="dark"] .chat-input .icon-btn { background: #1b2030; color: var(--ac-dark); }
 [data-theme="dark"] .chat-input .icon-btn:hover { background: #232838; }
@@ -627,6 +731,18 @@ textarea.form-control { min-height: 96px; resize: vertical; }
 /* Pay options */
 [data-theme="dark"] .pay-options label { background: var(--ac-card); border-color: var(--ac-border); color: var(--ac-dark); }
 [data-theme="dark"] .pay-options label:has(input:checked) { background: rgba(122,63,165,.22); border-color: var(--ac-purple); }
+
+/* Pay-note (instruction card under each payment method) — dark mode tints.
+   The base .card rule above paints these dark; we just slightly tint each one
+   with the brand color so they're still distinguishable. Body text uses the
+   theme's normal foreground so it remains readable. */
+[data-theme="dark"] .pay-note { background: var(--ac-card); border-color: var(--ac-border); color: var(--ac-dark); }
+[data-theme="dark"] .pay-note-gcash { background: rgba(33, 150, 243, .12); border-color: rgba(33, 150, 243, .35); }
+[data-theme="dark"] .pay-note-maya  { background: rgba(34, 197, 94, .12);  border-color: rgba(34, 197, 94, .35); }
+[data-theme="dark"] .pay-note-cod   { background: rgba(245, 158, 11, .12); border-color: rgba(245, 158, 11, .35); }
+[data-theme="dark"] .pay-note .card-body,
+[data-theme="dark"] .pay-note .card-body strong { color: var(--ac-dark); }
+[data-theme="dark"] .pay-note .text-muted { color: var(--ac-muted) !important; }
 
 /* Alerts (darker variants) */
 [data-theme="dark"] .alert-success { background: #052e21; color: #6ee7b7; border-color: #065f46; }

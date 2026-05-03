@@ -4,6 +4,7 @@
     var title = ViewData["Title"] as string;
     var current = ViewContext.RouteData.Values["controller"] as string;
     var action  = ViewContext.RouteData.Values["action"] as string;
+    var layoutFull = ViewBag.LayoutFull as bool? ?? false;
     int cartCount = 0;
     int unreadChat = 0;
     string? avatarPath = null;
@@ -49,7 +50,7 @@
         })();
     </script>
 </head>
-<body>
+<body class="@(layoutFull ? "is-fullbleed" : "")">
 <nav class="navbar">
     <div class="nav-inner">
         <a asp-controller="Home" asp-action="Index" class="brand" aria-label="AliCraft Creations — Home">

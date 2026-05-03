@@ -2,13 +2,17 @@
 @inject CurrentUser CurrentUser
 @{
     ViewData["Title"] = "Chat";
+    ViewBag.LayoutFull = true;
     var myId = CurrentUser.Id;
 }
 
-<div class="section-head">
-    <div>
-        <h2>Chat with AliCraft Admin</h2>
-        <p class="lead">Ask about customizations, shipping, or anything. We reply as fast as we can.</p>
+<div class="chat-header">
+    <div class="chat-header-identity">
+        <img src="~/images/logo.png" alt="AliCraft Creations" class="chat-header-logo" />
+        <div>
+            <h2 class="m-0">AliCraft Creations</h2>
+            <small class="text-muted">Ask about customizations, shipping, or anything.</small>
+        </div>
     </div>
 </div>
 
@@ -18,9 +22,10 @@
         {
             var me = m.SenderRole == "User" && m.SenderId == myId;
             <div class="chat-row @(me ? "me" : "")" data-id="@m.Id">
-                <div class="bubble">
-                    @if (!string.IsNullOrEmpty(m.Body)) { @m.Body }
-                    @if (!string.IsNullOrEmpty(m.ImagePath)) { <a href="@m.ImagePath" target="_blank"><img src="@m.ImagePath" alt="attachment" /></a> }
+                <div class="bubble-wrap">
+                    @* Keep bubble contents on a single Razor line so whitespace/indentation is not rendered *@
+                    @* inside the bubble (white-space:pre-wrap preserves it otherwise). *@
+                    <div class="bubble">@(m.Body ?? "")@if (!string.IsNullOrEmpty(m.ImagePath)) {<a href="@m.ImagePath" target="_blank"><img src="@m.ImagePath" alt="attachment" /></a>}</div>
                     <div class="meta">@m.CreatedAt.ToLocalTime().ToString("MMM d · h:mm tt")</div>
                 </div>
             </div>
@@ -63,10 +68,10 @@
                         var row = document.createElement('div');
                         row.className = 'chat-row' + (m.role === 'User' ? ' me' : '');
                         row.setAttribute('data-id', m.id);
-                        var html = '<div class="bubble">';
+                        var html = '<div class="bubble-wrap"><div class="bubble">';
                         if (m.body) html += escapeHtml(m.body);
                         if (m.image) html += '<a href="' + m.image + '" target="_blank"><img src="' + m.image + '" alt="attachment"/></a>';
-                        html += '<div class="meta">' + new Date(m.at).toLocaleString() + '</div></div>';
+                        html += '</div><div class="meta">' + new Date(m.at).toLocaleString() + '</div></div>';
                         row.innerHTML = html;
                         box.appendChild(row);
                         last = Math.max(last, m.at);

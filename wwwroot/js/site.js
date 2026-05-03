@@ -191,14 +191,18 @@
         });
     }
 
-    // Cascading Province -> City dropdown
+    // Cascading Province -> City dropdown.
+    // The <select> elements are rendered with no <option>s (they're fetched via JS),
+    // so `asp-for` cannot preselect a matching option at server render time.
+    // We rely on explicit data-preset attributes to know which province/city was saved.
     document.querySelectorAll('[data-province]').forEach(function (provSel) {
         var citySelId = provSel.getAttribute('data-city-target');
         var citySel = document.getElementById(citySelId);
         if (!citySel) return;
-        var preset = citySel.getAttribute('data-preset') || '';
-        populateProvinces(provSel, provSel.value, function () {
-            if (provSel.value) loadCities(provSel.value, citySel, preset);
+        var cityPreset = citySel.getAttribute('data-preset') || '';
+        var provincePreset = provSel.getAttribute('data-preset') || provSel.value || '';
+        populateProvinces(provSel, provincePreset, function () {
+            if (provSel.value) loadCities(provSel.value, citySel, cityPreset);
         });
         provSel.addEventListener('change', function () {
             loadCities(provSel.value, citySel, '');
@@ -278,4 +282,103 @@
             input.focus();
         });
     });
+
+    // File input enhancer
+    // Wraps every <input type="file"> (that doesn't opt out with data-no-enhance)
+    // so that: (1) a styled "Choose file" button is shown initially, (2) after a
+    // file is chosen, the button is hidden and the filename + an X remove button
+    // are shown, (3) clicking X clears the selection and restores the button.
+    // The native <input type="file"> is kept in the DOM (hidden) so normal form
+    // submission still works without any server-side changes.
+    (function () {
+        var FILE_ICON =
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+        var X_ICON =
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+        function enhance(input) {
+            if (input.dataset.fileEnhanced === '1') return;
+            if (input.dataset.noEnhance === 'true') return;
+            // Skip chat attachment pickers (they use their own paperclip UI via <label for>).
+            if (input.id === 'chatImage') return;
+            input.dataset.fileEnhanced = '1';
+
+            var wrap = document.createElement('div');
+            wrap.className = 'file-enh';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+
+            // Hide the native input visually but keep it focusable.
+            input.classList.add('file-enh-input');
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'file-enh-btn';
+            btn.innerHTML = FILE_ICON + '<span>Choose file</span>';
+            btn.addEventListener('click', function () { input.click(); });
+            wrap.appendChild(btn);
+
+            var chosen = document.createElement('div');
+            chosen.className = 'file-enh-chosen';
+            chosen.hidden = true;
+            var name = document.createElement('span');
+            name.className = 'file-enh-name';
+            var remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'file-enh-remove';
+            remove.setAttribute('aria-label', 'Remove file');
+            remove.title = 'Remove file';
+            remove.innerHTML = X_ICON;
+            chosen.appendChild(name);
+            chosen.appendChild(remove);
+            wrap.appendChild(chosen);
+
+            function show(f) {
+                if (f) {
+                    name.textContent = f.name;
+                    chosen.hidden = false;
+                    btn.hidden = true;
+                } else {
+                    chosen.hidden = true;
+                    btn.hidden = false;
+                }
+            }
+
+            function onChange() { show(input.files && input.files[0]); }
+            input.addEventListener('change', onChange);
+
+            // Robustly clear the selected file. Setting value='' works in modern
+            // browsers; older Safari ignores it. Falling back to clone-and-replace
+            // forces files to empty while preserving name/id/accept/etc.
+            function clearFile() {
+                try { input.value = ''; } catch (err) { /* noop */ }
+                if (input.files && input.files.length > 0) {
+                    var clone = input.cloneNode(false);
+                    clone.value = '';
+                    input.parentNode.replaceChild(clone, input);
+                    input = clone; // closure reference update (shared with btn click, etc.)
+                    input.classList.add('file-enh-input');
+                    input.dataset.fileEnhanced = '1';
+                    input.addEventListener('change', onChange);
+                }
+            }
+
+            // Use mousedown in addition to click so nothing can swallow the event
+            // (e.g. a parent label or form handler) before we run.
+            function handleRemove(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearFile();
+                show(null);
+            }
+            remove.addEventListener('click', handleRemove);
+
+            // Sync initial state (e.g., if the page was reloaded with a preselected file).
+            show(input.files && input.files[0]);
+        }
+
+        document.querySelectorAll('input[type="file"]').forEach(enhance);
+    })();
 })();
