@@ -2,7 +2,8 @@
 @{
     ViewData["Title"] = "Your cart";
     var subtotal = Model.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
-    var shipping = Model.Any() ? 79m : 0m;
+    var shipping = Model.Any() ? (decimal)(ViewBag.Shipping ?? 0m) : 0m;
+    var shippingZone = ViewBag.ShippingZone as string;
 }
 
 <div class="section-head">
@@ -66,7 +67,15 @@ else
         <div class="card"><div class="card-body">
             <h3 class="mt-0">Order summary</h3>
             <div class="flex-between"><span>Subtotal</span><strong>₱@subtotal.ToString("N2")</strong></div>
-            <div class="flex-between"><span>Shipping</span><strong>₱@shipping.ToString("N2")</strong></div>
+            <div class="flex-between">
+                <span>
+                    Shipping
+                    <small class="text-muted" style="display:block;font-size:.78rem;">
+                        @(string.IsNullOrEmpty(shippingZone) ? "Estimate · final fee at checkout" : $"Est. · {shippingZone}")
+                    </small>
+                </span>
+                <strong>₱@shipping.ToString("N2")</strong>
+            </div>
             <hr />
             <div class="flex-between"><span style="font-size:1.1rem;">Total</span><strong style="color:var(--ac-pink);font-size:1.3rem;">₱@((subtotal + shipping).ToString("N2"))</strong></div>
             <a asp-controller="Orders" asp-action="Checkout" class="btn btn-primary btn-lg btn-block mt-2">Checkout →</a>

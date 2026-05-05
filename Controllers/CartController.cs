@@ -40,6 +40,12 @@ public class CartController : Controller
             .Where(c => c.UserId == uid)
             .OrderBy(c => c.AddedAt)
             .ToListAsync();
+        // Show an estimated shipping fee based on the user's saved province so
+        // the cart total matches what they'll see at checkout. Falls back to the
+        // Local rate when no province is on file.
+        var user = await _current.GetAsync();
+        ViewBag.Shipping = ShippingZones.FeeFor(user?.Province) ?? ShippingZones.DefaultFee;
+        ViewBag.ShippingZone = ShippingZones.LabelFor(user?.Province);
         return View(items);
     }
 
