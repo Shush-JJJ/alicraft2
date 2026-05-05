@@ -4,6 +4,7 @@
     var cart = ViewBag.Cart as IEnumerable<CartItem> ?? Enumerable.Empty<CartItem>();
     var subtotal = (decimal)(ViewBag.Subtotal ?? 0m);
     var shipping = (decimal)(ViewBag.Shipping ?? 0m);
+    var shippingZone = ViewBag.ShippingZone as string;
 }
 
 <div class="section-head">
@@ -25,6 +26,10 @@
     <div class="grid-3">
         <div class="card"><div class="card-body">
             <h3 class="mt-0">Shipping details</h3>
+            <div class="alert alert-info mb-2" style="background:#eef2ff;border-left:4px solid #6366f1;padding:.75rem 1rem;border-radius:.4rem;">
+                <strong>📍 Delivery: Luzon only.</strong>
+                <span class="text-muted" style="font-size:.9rem;">Ships from Karangalan Village, Brgy. San Isidro, Cainta, Rizal. Shipping fee is calculated based on your province.</span>
+            </div>
             <div asp-validation-summary="ModelOnly" class="alert alert-error mb-2" style="display:@(ViewData.ModelState.ErrorCount > 0 ? "block" : "none")"></div>
 
             <div class="row-2">
@@ -54,6 +59,8 @@
                     <select asp-for="ShippingProvince" id="Province" class="form-control"
                             data-province="true" data-city-target="City"
                             data-preset="@Model.ShippingProvince"></select>
+                    <small id="zoneHint" class="form-text" style="color:var(--ac-purple);">@(string.IsNullOrEmpty(shippingZone) ? "Select your province to see the shipping fee." : $"Zone: {shippingZone}")</small>
+                    <span asp-validation-for="ShippingProvince" class="text-danger"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">City / Municipality</label>
@@ -164,9 +171,12 @@
                 </div>
             }
             <hr/>
-            <div class="flex-between"><span>Subtotal</span><strong>₱@subtotal.ToString("N2")</strong></div>
-            <div class="flex-between"><span>Shipping</span><strong>₱@shipping.ToString("N2")</strong></div>
-            <div class="flex-between mt-1"><span style="font-size:1.1rem;">Total</span><strong style="color:var(--ac-pink);font-size:1.3rem;">₱@((subtotal + shipping).ToString("N2"))</strong></div>
+            <div class="flex-between"><span>Subtotal</span><strong id="sumSubtotal" data-value="@subtotal">₱@subtotal.ToString("N2")</strong></div>
+            <div class="flex-between">
+                <span>Shipping <small id="sumZone" class="text-muted" style="font-weight:normal;">@(string.IsNullOrEmpty(shippingZone) ? "" : $"({shippingZone})")</small></span>
+                <strong id="sumShipping" data-value="@shipping">₱@shipping.ToString("N2")</strong>
+            </div>
+            <div class="flex-between mt-1"><span style="font-size:1.1rem;">Total</span><strong id="sumTotal" style="color:var(--ac-pink);font-size:1.3rem;">₱@((subtotal + shipping).ToString("N2"))</strong></div>
             <button type="submit" class="btn btn-primary btn-lg btn-block mt-2">Place order</button>
             <p class="text-muted text-center mt-1 mb-0" style="font-size:.82rem;">By placing this order you agree to our customization terms.</p>
         </div></div>
@@ -199,6 +209,59 @@
             r.addEventListener('change', togglePay);
         });
         togglePay();
+    })();
+
+    // Live-update shipping fee when the user changes their province.
+    // Hits /api/locations/shipping-fee and rewrites the order-summary numbers.
+    (function () {
+        var prov     = document.getElementById('Province');
+        var sumShip  = document.getElementById('sumShipping');
+        var sumZone  = document.getElementById('sumZone');
+        var sumSub   = document.getElementById('sumSubtotal');
+        var sumTotal = document.getElementById('sumTotal');
+        var hint     = document.getElementById('zoneHint');
+        if (!prov || !sumShip || !sumTotal) return;
+
+        function fmt(n) {
+            return '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function refresh() {
+            var p = prov.value;
+            if (!p) {
+                if (hint) { hint.textContent = 'Select your province to see the shipping fee.'; hint.style.color = ''; }
+                return;
+            }
+            fetch('/api/locations/shipping-fee?province=' + encodeURIComponent(p))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var subtotal = parseFloat(sumSub.getAttribute('data-value')) || 0;
+                    if (data.serviceable) {
+                        var fee = Number(data.fee);
+                        sumShip.textContent = fmt(fee);
+                        sumShip.setAttribute('data-value', fee);
+                        if (sumZone) sumZone.textContent = '(' + data.zone + ')';
+                        sumTotal.textContent = fmt(subtotal + fee);
+                        if (hint) {
+                            hint.textContent = 'Zone: ' + data.zone + ' — shipping ' + fmt(fee);
+                            hint.style.color = '';
+                        }
+                    } else {
+                        sumShip.textContent = '—';
+                        sumShip.setAttribute('data-value', 0);
+                        if (sumZone) sumZone.textContent = '(not serviceable)';
+                        sumTotal.textContent = fmt(subtotal);
+                        if (hint) {
+                            hint.textContent = '⚠ We don\'t deliver to ' + p + '. Please choose a Luzon province.';
+                            hint.style.color = '#dc2626';
+                        }
+                    }
+                })
+                .catch(function () { /* ignore network glitches */ });
+        }
+        prov.addEventListener('change', refresh);
+        // No initial-load call: the server already rendered the correct fee/zone
+        // for the user's saved province, and the provinces dropdown is populated
+        // asynchronously by site.js (so prov.value would still be empty here).
     })();
 </script>
 }

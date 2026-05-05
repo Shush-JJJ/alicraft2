@@ -14,8 +14,6 @@ public class OrdersController : Controller
     private readonly CurrentUser _current;
     private readonly IWebHostEnvironment _env;
 
-    private const decimal ShippingFee = 79m;
-
     public OrdersController(AppDbContext db, CurrentUser current, IWebHostEnvironment env)
     {
         _db = db;
@@ -78,9 +76,11 @@ public class OrdersController : Controller
             return RedirectToAction("Index", "Cart");
         }
         var user = await _current.GetAsync();
+        var initialFee = ShippingZones.FeeFor(user?.Province) ?? ShippingZones.DefaultFee;
         ViewBag.Cart = cart;
         ViewBag.Subtotal = cart.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
-        ViewBag.Shipping = ShippingFee;
+        ViewBag.Shipping = initialFee;
+        ViewBag.ShippingZone = ShippingZones.LabelFor(user?.Province);
         var vm = new CheckoutVm
         {
             ShippingName = user?.Name ?? "",
@@ -106,11 +106,29 @@ public class OrdersController : Controller
             return RedirectToAction("Index", "Cart");
         }
 
-        if (!ModelState.IsValid)
+        // Local helper to repopulate the ViewBag bits the form needs when re-rendering.
+        decimal RebuildViewBag()
         {
+            var fee = ShippingZones.FeeFor(vm.ShippingProvince) ?? ShippingZones.DefaultFee;
             ViewBag.Cart = cart;
             ViewBag.Subtotal = cart.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
-            ViewBag.Shipping = ShippingFee;
+            ViewBag.Shipping = fee;
+            ViewBag.ShippingZone = ShippingZones.LabelFor(vm.ShippingProvince);
+            return fee;
+        }
+
+        if (!ModelState.IsValid)
+        {
+            RebuildViewBag();
+            return View(vm);
+        }
+
+        // Block deliveries outside Luzon — the store can only ship within Luzon.
+        if (!ShippingZones.IsServiceable(vm.ShippingProvince))
+        {
+            ModelState.AddModelError(nameof(vm.ShippingProvince),
+                "Sorry, we currently only deliver within Luzon. Please choose a Luzon province.");
+            RebuildViewBag();
             return View(vm);
         }
 
@@ -119,9 +137,7 @@ public class OrdersController : Controller
         if (!validMethods.Contains(vm.PaymentMethod))
         {
             ModelState.AddModelError(nameof(vm.PaymentMethod), "Please choose a valid payment method.");
-            ViewBag.Cart = cart;
-            ViewBag.Subtotal = cart.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
-            ViewBag.Shipping = ShippingFee;
+            RebuildViewBag();
             return View(vm);
         }
 
@@ -131,9 +147,7 @@ public class OrdersController : Controller
         {
             ModelState.AddModelError(nameof(vm.PaymentReference),
                 $"Please enter your {vm.PaymentMethod} reference number or upload a payment screenshot.");
-            ViewBag.Cart = cart;
-            ViewBag.Subtotal = cart.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
-            ViewBag.Shipping = ShippingFee;
+            RebuildViewBag();
             return View(vm);
         }
 
@@ -142,13 +156,15 @@ public class OrdersController : Controller
             proof = await FileHelper.SaveAsync(_env, vm.PaymentProof, "payments");
 
         var subtotal = cart.Sum(c => c.Quantity * (c.Product?.Price ?? 0));
+        // Authoritative server-side fee — never trust whatever number the form posted.
+        var shipping = ShippingZones.FeeFor(vm.ShippingProvince)!.Value;
         var order = new Order
         {
             UserId = uid,
             OrderNumber = $"AC-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}",
             Subtotal = subtotal,
-            Shipping = ShippingFee,
-            Total = subtotal + ShippingFee,
+            Shipping = shipping,
+            Total = subtotal + shipping,
             Status = OrderStatus.Pending,
             PaymentMethod = vm.PaymentMethod,
             PaymentReference = string.IsNullOrWhiteSpace(vm.PaymentReference) ? null : vm.PaymentReference.Trim(),
