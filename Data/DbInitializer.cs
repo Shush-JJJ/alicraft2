@@ -1,5 +1,7 @@
 using Alicraft2.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Alicraft2.Data;
 
@@ -8,6 +10,19 @@ public static class DbInitializer
     public static async Task SeedAsync(AppDbContext db)
     {
         await db.Database.EnsureCreatedAsync();
+
+        // EnsureCreatedAsync skips schema creation if the database already has
+        // ANY tables. Managed Postgres providers (Neon especially) ship the
+        // default `neondb` database with extension/system objects preinstalled,
+        // which tricks EF Core into thinking our schema is already there.
+        // Explicitly verify our Users table exists; if it doesn't, force the
+        // full schema to be created.
+        if (!await OurSchemaExistsAsync(db))
+        {
+            var creator = (RelationalDatabaseCreator)db.Database.GetService<IDatabaseCreator>();
+            await creator.CreateTablesAsync();
+        }
+
         await EnsureSchemaUpgradesAsync(db);
 
         if (!await db.Users.AnyAsync())
@@ -236,6 +251,32 @@ public static class DbInitializer
                 );
                 await db.SaveChangesAsync();
             }
+        }
+    }
+
+    /// <summary>
+    /// Returns true only when the `Users` table exists (case-sensitive on Postgres).
+    /// Used as a stricter alternative to <c>HasTablesAsync</c>, which returns true
+    /// for any non-system table and is therefore fooled by Neon's preinstalled
+    /// extension metadata into skipping our schema creation.
+    /// </summary>
+    private static async Task<bool> OurSchemaExistsAsync(AppDbContext db)
+    {
+        var conn = db.Database.GetDbConnection();
+        var wasClosed = conn.State != System.Data.ConnectionState.Open;
+        if (wasClosed) await conn.OpenAsync();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = db.Database.IsSqlite()
+                ? "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'Users'"
+                : "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Users'";
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+        finally
+        {
+            if (wasClosed) await conn.CloseAsync();
         }
     }
 
