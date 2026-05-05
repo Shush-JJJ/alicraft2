@@ -21,24 +21,14 @@ public class AccountController : Controller
     private readonly CurrentUser _current;
     private readonly IWebHostEnvironment _env;
     private readonly IEmailService _email;
-    private readonly ILogger<AccountController> _log;
-    private readonly IConfiguration _config;
 
-    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email, ILogger<AccountController> log, IConfiguration config)
+    public AccountController(AppDbContext db, CurrentUser current, IWebHostEnvironment env, IEmailService email)
     {
         _db = db;
         _current = current;
         _env = env;
         _email = email;
-        _log = log;
-        _config = config;
     }
-
-    // When true (default), new accounts must click a verification link before logging in.
-    // Override to false on hosts where email delivery is unreliable (e.g. Render free tier
-    // with Brevo blocklisting) by setting env var: Account__RequireEmailVerification=false
-    private bool RequireEmailVerification =>
-        _config.GetValue("Account:RequireEmailVerification", true);
 
     // ---------- REGISTER ----------
     [HttpGet]
@@ -63,7 +53,6 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var requireVerify = RequireEmailVerification;
         var user = new User
         {
             Name = vm.Name.Trim(),
@@ -76,36 +65,17 @@ public class AccountController : Controller
             Barangay = vm.Barangay,
             Street = vm.Street,
             PostalCode = vm.PostalCode,
-            IsEmailVerified = !requireVerify,
-            EmailVerificationToken = requireVerify ? NewToken() : null,
-            EmailVerificationTokenExpiresAt = requireVerify ? DateTime.UtcNow.AddHours(24) : null,
-            EmailVerificationLastSentAt = requireVerify ? DateTime.UtcNow : (DateTime?)null
+            IsEmailVerified = false,
+            EmailVerificationToken = NewToken(),
+            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
+            EmailVerificationLastSentAt = DateTime.UtcNow
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        // Demo mode: verification disabled. Account is already verified, skip the email.
-        if (!requireVerify)
-        {
-            TempData["Success"] = $"Account created for {user.Email}. You can log in now.";
-            return RedirectToAction(nameof(Login));
-        }
+        await SendVerificationEmailAsync(user);
 
-        var (sent, sendError) = await SendVerificationEmailAsync(user);
-
-        if (sent)
-        {
-            TempData["Success"] = $"We sent a verification link to {user.Email}. Please check your inbox (and Spam folder) to activate your account.";
-        }
-        else
-        {
-            _log.LogError("Verification email send failed for {Email}: {Error}", user.Email, sendError);
-            var resendUrl = Url.Action(nameof(ResendVerification), new { email = user.Email });
-            TempData["Warning"] =
-                $"Your account was created, but we couldn't send the verification email right now. " +
-                $"Reason: <code>{System.Net.WebUtility.HtmlEncode(sendError ?? "unknown error")}</code>. " +
-                $"You can <a href=\"{resendUrl}\">click here to resend</a> in a moment.";
-        }
+        TempData["Success"] = $"We sent a verification link to {user.Email}. Please check your inbox to activate your account.";
         return RedirectToAction(nameof(VerifyEmailSent), new { email = user.Email });
     }
 
@@ -187,20 +157,15 @@ public class AccountController : Controller
                 user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24);
                 user.EmailVerificationLastSentAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                var (sent, sendError) = await SendVerificationEmailAsync(user);
-                if (!sent)
-                {
-                    _log.LogError("Resend verification failed for {Email}: {Error}", user.Email, sendError);
-                    result.Message = $"We couldn't send the verification email. Reason: {sendError}. Please try again in a minute.";
-                }
+                await SendVerificationEmailAsync(user);
             }
         }
         return View("ResendVerification", result);
     }
 
-    private async Task<(bool ok, string? error)> SendVerificationEmailAsync(User user)
+    private async Task SendVerificationEmailAsync(User user)
     {
-        if (string.IsNullOrEmpty(user.EmailVerificationToken)) return (false, "missing token");
+        if (string.IsNullOrEmpty(user.EmailVerificationToken)) return;
         var baseUrl = _email.BaseUrl;
         var link = $"{baseUrl}/Account/VerifyEmail?token={Uri.EscapeDataString(user.EmailVerificationToken)}";
         var html = $@"<!doctype html><html><body style='font-family:Arial,sans-serif;background:#f7f7f9;padding:24px;'>
@@ -215,7 +180,7 @@ public class AccountController : Controller
   <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0;'>
   <p style='font-size:12px;color:#9ca3af;text-align:center;'>AliCraft Creations &middot; Custom 3D Lithophane Crafts</p>
 </div></body></html>";
-        return await _email.TrySendAsync(user.Email, user.Name, "Confirm your AliCraft email", html);
+        await _email.SendAsync(user.Email, user.Name, "Confirm your AliCraft email", html);
     }
 
     private static string NewToken() => Convert.ToBase64String(Guid.NewGuid().ToByteArray()).TrimEnd('=').Replace('+', '-').Replace('/', '_');
@@ -242,7 +207,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        if (RequireEmailVerification && !user.IsEmailVerified)
+        if (!user.IsEmailVerified)
         {
             ViewBag.UnverifiedEmail = user.Email;
             ModelState.AddModelError(string.Empty, "Please verify your email before logging in. Check your inbox for the verification link.");

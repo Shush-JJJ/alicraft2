@@ -31,7 +31,15 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Phone</label>
-                    <input asp-for="Phone" class="form-control" />
+                    <input asp-for="Phone" class="form-control"
+                           type="tel"
+                           inputmode="numeric"
+                           maxlength="13"
+                           pattern="(09|\+639|639)\d{9}"
+                           title="Philippine mobile number (e.g. 09171234567 or +639171234567)."
+                           placeholder="09171234567"
+                           oninput="this.value=this.value.replace(/[^\d+]/g,'')" />
+                    <small class="form-text">Digits only. Format: 09XXXXXXXXX or +639XXXXXXXXX</small>
                     <span asp-validation-for="Phone" class="text-danger"></span>
                 </div>
             </div>
@@ -45,8 +53,7 @@
                 <div class="form-group">
                     <label class="form-label">Province</label>
                     <select asp-for="Province" id="Province" class="form-control"
-                            data-province="true" data-city-target="City"
-                            data-preset="@Model.Province"></select>
+                            data-province="true" data-city-target="City"></select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">City / Municipality</label>

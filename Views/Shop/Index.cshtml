@@ -4,15 +4,6 @@
     var category = ViewBag.Category as string;
     var q = ViewBag.Query as string;
     var sort = ViewBag.Sort as string ?? "newest";
-    var categories = (ViewBag.Categories as IEnumerable<string>) ?? Enumerable.Empty<string>();
-
-    string Pluralize(string c) => c switch
-    {
-        "Frame"        => "Frames",
-        "Keychain"     => "Keychains",
-        "3D Display"   => "3D Displays",
-        _              => c
-    };
 }
 
 <div class="section-head">
@@ -22,7 +13,7 @@
     </div>
     <form method="get" class="flex gap-1" style="max-width:420px;">
         <input type="text" name="q" value="@q" class="form-control" placeholder="Search…" />
-        <input type="hidden" name="category" value="@(category == "All" ? "" : category)" />
+        <input type="hidden" name="category" value="@category" />
         <select name="sort" class="form-control" onchange="this.form.submit()" style="max-width:160px;">
             <option value="newest"     selected="@(sort == "newest" ? "selected" : null)">Newest</option>
             <option value="price-asc"  selected="@(sort == "price-asc" ? "selected" : null)">Price ↑</option>
@@ -34,15 +25,9 @@
 </div>
 
 <div class="chips">
-    <a asp-action="Index" asp-route-q="@q" asp-route-sort="@sort" class="chip @(string.IsNullOrEmpty(category) || category == "All" ? "active" : "")">All</a>
-    @foreach (var c in categories)
-    {
-        <a asp-action="Index"
-           asp-route-category="@c"
-           asp-route-q="@q"
-           asp-route-sort="@sort"
-           class="chip @(category == c ? "active" : "")">@Pluralize(c)</a>
-    }
+    <a asp-action="Index" asp-route-sort="@sort" class="chip @(string.IsNullOrEmpty(category) || category == "All" ? "active" : "")">All</a>
+    <a asp-action="Index" asp-route-category="Frame" asp-route-sort="@sort" class="chip @(category == "Frame" ? "active" : "")">Frames</a>
+    <a asp-action="Index" asp-route-category="Keychain" asp-route-sort="@sort" class="chip @(category == "Keychain" ? "active" : "")">Keychains</a>
 </div>
 
 @if (!Model.Any())

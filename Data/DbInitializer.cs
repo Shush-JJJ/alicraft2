@@ -52,57 +52,57 @@ public static class DbInitializer
             db.Products.AddRange(
                 new Product
                 {
-                    Name = "Rectangle Lithophane",
-                    Description = "A wide rectangular lithophane plaque that reveals your photo's depth when lit from behind. Perfect for mantels, desks, and living-room displays. Send us the photo — we handle the rest.",
+                    Name = "Classic Wooden Lithophane Frame",
+                    Description = "Handcrafted wooden frame with a custom 3D lithophane insert. LED backlight included. Ideal gift for anniversaries and birthdays.",
                     Category = "Frame",
                     Price = 799m,
                     Stock = 25,
-                    ImagePath = "/images/rectangle-lithophane.webp"
+                    ImagePath = "/images/placeholder-frame.svg"
                 },
                 new Product
                 {
-                    Name = "Square Lithophane",
-                    Description = "A classic square lithophane tile for portrait photos. Compact and versatile — fits any shelf, nightstand, or wall display.",
+                    Name = "Heart-Shaped Lithophane Frame",
+                    Description = "Romantic heart-shaped lithophane with USB-powered warm-white light. Send us the photo — we handle the rest.",
                     Category = "Frame",
                     Price = 699m,
                     Stock = 30,
-                    ImagePath = "/images/square-lithophane.webp"
+                    ImagePath = "/images/placeholder-frame2.svg"
                 },
                 new Product
                 {
-                    Name = "3D Box Lithophane",
-                    Description = "A four-sided cube lithophane showcasing four of your favorite photos, one per face. A glowing centerpiece that rotates your most cherished memories.",
-                    Category = "3D Display",
-                    Price = 1_499m,
-                    Stock = 12,
-                    ImagePath = "/images/3d-box-lithophane.webp"
+                    Name = "Premium Acrylic Lithophane Frame",
+                    Description = "Crystal-clear acrylic stand with crisp, high-detail 3D print. Modern minimalist look for offices and living rooms.",
+                    Category = "Frame",
+                    Price = 1_199m,
+                    Stock = 15,
+                    ImagePath = "/images/placeholder-frame3.svg"
                 },
                 new Product
                 {
-                    Name = "Rectangle Keychain Lithophane",
-                    Description = "Carry your favorite memory in your pocket. Rectangular photo keychain that reveals its image in stunning 3D when held to the light. Sturdy metal ring included.",
+                    Name = "Personalized Lithophane Keychain",
+                    Description = "Carry your favorite photo everywhere. Hold it to the light to reveal the 3D portrait. Comes with a sturdy metal ring.",
                     Category = "Keychain",
                     Price = 199m,
                     Stock = 100,
-                    ImagePath = "/images/rectangle-keychain-lithophane.webp"
+                    ImagePath = "/images/placeholder-keychain.svg"
                 },
                 new Product
                 {
-                    Name = "Square Keychain Lithophane",
-                    Description = "A compact square photo keychain — perfect for portraits and pet faces. Lightweight, durable, and ready to go everywhere you do.",
+                    Name = "Couple Lithophane Keychain Set",
+                    Description = "A matching pair for you and your special someone. Two keychains, one unforgettable story.",
+                    Category = "Keychain",
+                    Price = 349m,
+                    Stock = 50,
+                    ImagePath = "/images/placeholder-keychain2.svg"
+                },
+                new Product
+                {
+                    Name = "Pet Memorial Lithophane Keychain",
+                    Description = "A thoughtful way to keep your furry friend close. Send us your pet's photo and we will craft it with love.",
                     Category = "Keychain",
                     Price = 249m,
-                    Stock = 80,
-                    ImagePath = "/images/square-keychain-lithophane.jpg"
-                },
-                new Product
-                {
-                    Name = "Heart Keychain Lithophane",
-                    Description = "A romantic heart-shaped keychain for couples, best friends, and family. Holds your photo in timeless 3D detail — the perfect little gift.",
-                    Category = "Keychain",
-                    Price = 299m,
                     Stock = 60,
-                    ImagePath = "/images/heart-keychain-lithophane.webp"
+                    ImagePath = "/images/placeholder-keychain3.svg"
                 }
             );
             await db.SaveChangesAsync();

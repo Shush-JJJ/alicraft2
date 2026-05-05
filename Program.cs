@@ -28,24 +28,23 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
-builder.Services.AddHttpClient();
 
-// Email provider selection: if Brevo__ApiKey is configured (works on hosts that
-// block outbound SMTP, like Render free tier), use the Brevo HTTP API.
-// Otherwise fall back to System.Net.Mail SMTP — fine for local dev with Gmail.
-builder.Services.AddSingleton<IEmailService>(sp =>
+// Email provider selection:
+// - If a Brevo API key is configured (Brevo__ApiKey on Render), use the Brevo
+//   HTTP API. It talks over HTTPS port 443 so it works on hosts that block
+//   outbound SMTP (e.g. Render's free tier).
+// - Otherwise fall back to System.Net.Mail SMTP (good for local dev with Gmail
+//   App Passwords or any other SMTP server).
+var brevoApiKey = builder.Configuration["Brevo:ApiKey"];
+if (!string.IsNullOrWhiteSpace(brevoApiKey))
 {
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var brevoKey = cfg["Brevo:ApiKey"];
-    if (!string.IsNullOrWhiteSpace(brevoKey))
-    {
-        return new BrevoEmailService(
-            cfg,
-            sp.GetRequiredService<ILogger<BrevoEmailService>>(),
-            sp.GetRequiredService<IHttpClientFactory>());
-    }
-    return new EmailService(cfg, sp.GetRequiredService<ILogger<EmailService>>());
-});
+    builder.Services.AddHttpClient();
+    builder.Services.AddSingleton<IEmailService, BrevoEmailService>();
+}
+else
+{
+    builder.Services.AddSingleton<IEmailService, EmailService>();
+}
 
 builder.Services.AddControllersWithViews();
 

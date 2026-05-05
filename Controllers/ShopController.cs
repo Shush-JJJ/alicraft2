@@ -13,7 +13,7 @@ public class ShopController : Controller
     public async Task<IActionResult> Index(string? category, string? q, string? sort)
     {
         IQueryable<Product> query = _db.Products.Where(p => p.IsActive);
-        if (!string.IsNullOrWhiteSpace(category) && category != "All")
+        if (!string.IsNullOrWhiteSpace(category))
             query = query.Where(p => p.Category == category);
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -30,12 +30,6 @@ public class ShopController : Controller
         };
 
         var products = await query.ToListAsync();
-        ViewBag.Categories = await _db.Products
-            .Where(p => p.IsActive && p.Category != null && p.Category != "")
-            .Select(p => p.Category!)
-            .Distinct()
-            .OrderBy(c => c)
-            .ToListAsync();
         ViewBag.Category = category ?? "All";
         ViewBag.Query = q ?? "";
         ViewBag.Sort = sort ?? "newest";
