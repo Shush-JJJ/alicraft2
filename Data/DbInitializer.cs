@@ -7,6 +7,32 @@ namespace Alicraft2.Data;
 
 public static class DbInitializer
 {
+    // Catalog of products the shop ships with. The image files live in
+    // wwwroot/images/ so they are baked into the Docker image and survive
+    // every Render redeploy. Order matters: the orders-seed below references
+    // these by index (0..5).
+    private static readonly (string Name, string Description, string Category, decimal Price, int Stock, string ImagePath)[] SeedProducts = new[]
+    {
+        ("Rectangle Lithophane",
+         "A wide rectangular lithophane plaque that reveals your photo's depth when lit from behind. Perfect for mantels, desks, and living-room displays. Send us the photo — we handle the rest.",
+         "Frame", 799m, 25, "/images/rectangle-lithophane.webp"),
+        ("Square Lithophane",
+         "A classic square lithophane tile for portrait photos. Compact and versatile — fits any shelf, nightstand, or wall display.",
+         "Frame", 699m, 30, "/images/square-lithophane.webp"),
+        ("3D Box Lithophane",
+         "A four-sided cube lithophane showcasing four of your favorite photos, one per face. A glowing centerpiece that rotates your most cherished memories.",
+         "3D Display", 1_499m, 11, "/images/3d-box-lithophane.webp"),
+        ("Rectangle Keychain Lithophane",
+         "Carry your favorite memory in your pocket. Rectangular photo keychain that reveals its image in stunning 3D when held to the light. Sturdy metal ring included.",
+         "Keychain", 199m, 97, "/images/rectangle-keychain-lithophane.webp"),
+        ("Square Keychain Lithophane",
+         "A compact square photo keychain — perfect for portraits and pet faces. Lightweight, durable, and ready to go everywhere you do.",
+         "Keychain", 249m, 80, "/images/square-keychain-lithophane.jpg"),
+        ("Heart Keychain Lithophane",
+         "A romantic heart-shaped keychain for couples, best friends, and family. Holds your photo in timeless 3D detail — the perfect little gift.",
+         "Keychain", 299m, 30, "/images/heart-keychain-lithophane.webp"),
+    };
+
     public static async Task SeedAsync(AppDbContext db)
     {
         await db.Database.EnsureCreatedAsync();
@@ -62,72 +88,56 @@ public static class DbInitializer
             await db.SaveChangesAsync();
         }
 
-        if (!await db.Products.AnyAsync())
+        // Fresh seed OR migrate-in-place if a previous deploy seeded the old placeholder set.
+        // Detection: any product whose ImagePath points at a "/images/placeholder-" SVG.
+        // Matched by ordinal so existing FK references (orders, cart items) stay intact.
+        var products = await db.Products.OrderBy(p => p.Id).ToListAsync();
+        var hasPlaceholders = products.Any(p => p.ImagePath != null && p.ImagePath.Contains("placeholder-"));
+
+        if (products.Count == 0)
         {
-            db.Products.AddRange(
-                new Product
+            foreach (var s in SeedProducts)
+            {
+                db.Products.Add(new Product
                 {
-                    Name = "Classic Wooden Lithophane Frame",
-                    Description = "Handcrafted wooden frame with a custom 3D lithophane insert. LED backlight included. Ideal gift for anniversaries and birthdays.",
-                    Category = "Frame",
-                    Price = 799m,
-                    Stock = 25,
-                    ImagePath = "/images/placeholder-frame.svg"
-                },
-                new Product
+                    Name = s.Name, Description = s.Description, Category = s.Category,
+                    Price = s.Price, Stock = s.Stock, ImagePath = s.ImagePath, IsActive = true
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+        else if (hasPlaceholders)
+        {
+            // Upgrade each old placeholder row to the real product (by ordinal position).
+            for (int i = 0; i < products.Count && i < SeedProducts.Length; i++)
+            {
+                var s = SeedProducts[i];
+                products[i].Name        = s.Name;
+                products[i].Description = s.Description;
+                products[i].Category    = s.Category;
+                products[i].Price       = s.Price;
+                products[i].Stock       = s.Stock;
+                products[i].ImagePath   = s.ImagePath;
+                products[i].IsActive    = true;
+            }
+            // If the migration adds NEW products beyond the count we already had, append them.
+            for (int i = products.Count; i < SeedProducts.Length; i++)
+            {
+                var s = SeedProducts[i];
+                db.Products.Add(new Product
                 {
-                    Name = "Heart-Shaped Lithophane Frame",
-                    Description = "Romantic heart-shaped lithophane with USB-powered warm-white light. Send us the photo — we handle the rest.",
-                    Category = "Frame",
-                    Price = 699m,
-                    Stock = 30,
-                    ImagePath = "/images/placeholder-frame2.svg"
-                },
-                new Product
-                {
-                    Name = "Premium Acrylic Lithophane Frame",
-                    Description = "Crystal-clear acrylic stand with crisp, high-detail 3D print. Modern minimalist look for offices and living rooms.",
-                    Category = "Frame",
-                    Price = 1_199m,
-                    Stock = 15,
-                    ImagePath = "/images/placeholder-frame3.svg"
-                },
-                new Product
-                {
-                    Name = "Personalized Lithophane Keychain",
-                    Description = "Carry your favorite photo everywhere. Hold it to the light to reveal the 3D portrait. Comes with a sturdy metal ring.",
-                    Category = "Keychain",
-                    Price = 199m,
-                    Stock = 100,
-                    ImagePath = "/images/placeholder-keychain.svg"
-                },
-                new Product
-                {
-                    Name = "Couple Lithophane Keychain Set",
-                    Description = "A matching pair for you and your special someone. Two keychains, one unforgettable story.",
-                    Category = "Keychain",
-                    Price = 349m,
-                    Stock = 50,
-                    ImagePath = "/images/placeholder-keychain2.svg"
-                },
-                new Product
-                {
-                    Name = "Pet Memorial Lithophane Keychain",
-                    Description = "A thoughtful way to keep your furry friend close. Send us your pet's photo and we will craft it with love.",
-                    Category = "Keychain",
-                    Price = 249m,
-                    Stock = 60,
-                    ImagePath = "/images/placeholder-keychain3.svg"
-                }
-            );
+                    Name = s.Name, Description = s.Description, Category = s.Category,
+                    Price = s.Price, Stock = s.Stock, ImagePath = s.ImagePath, IsActive = true
+                });
+            }
             await db.SaveChangesAsync();
         }
 
         if (!await db.Orders.AnyAsync())
         {
             var demo = await db.Users.FirstOrDefaultAsync(u => u.Email == "demo@alicraft.com");
-            var products = await db.Products.OrderBy(p => p.Id).ToListAsync();
-            if (demo != null && products.Count >= 6)
+            var orderProducts = await db.Products.OrderBy(p => p.Id).ToListAsync();
+            if (demo != null && orderProducts.Count >= 6)
             {
                 var now = DateTime.UtcNow;
 
@@ -147,8 +157,8 @@ public static class DbInitializer
                     InTransitAt = now.AddDays(-11),
                     DeliveredAt = now.AddDays(-10)
                 };
-                o1.Items.Add(new OrderItem { ProductId = products[0].Id, ProductName = products[0].Name, UnitPrice = products[0].Price, Quantity = 1 });
-                o1.Items.Add(new OrderItem { ProductId = products[3].Id, ProductName = products[3].Name, UnitPrice = products[3].Price, Quantity = 2 });
+                o1.Items.Add(new OrderItem { ProductId = orderProducts[0].Id, ProductName = orderProducts[0].Name, UnitPrice = orderProducts[0].Price, Quantity = 1 });
+                o1.Items.Add(new OrderItem { ProductId = orderProducts[3].Id, ProductName = orderProducts[3].Name, UnitPrice = orderProducts[3].Price, Quantity = 2 });
                 o1.Subtotal = o1.Items.Sum(i => i.UnitPrice * i.Quantity);
                 o1.Shipping = 79m;
                 o1.Total = o1.Subtotal + o1.Shipping;
@@ -168,8 +178,8 @@ public static class DbInitializer
                     InTransitAt = now.AddDays(-4),
                     DeliveredAt = now.AddDays(-3)
                 };
-                o2.Items.Add(new OrderItem { ProductId = products[1].Id, ProductName = products[1].Name, UnitPrice = products[1].Price, Quantity = 1 });
-                o2.Items.Add(new OrderItem { ProductId = products[4].Id, ProductName = products[4].Name, UnitPrice = products[4].Price, Quantity = 1 });
+                o2.Items.Add(new OrderItem { ProductId = orderProducts[1].Id, ProductName = orderProducts[1].Name, UnitPrice = orderProducts[1].Price, Quantity = 1 });
+                o2.Items.Add(new OrderItem { ProductId = orderProducts[4].Id, ProductName = orderProducts[4].Name, UnitPrice = orderProducts[4].Price, Quantity = 1 });
                 o2.Subtotal = o2.Items.Sum(i => i.UnitPrice * i.Quantity);
                 o2.Shipping = 79m;
                 o2.Total = o2.Subtotal + o2.Shipping;
@@ -189,7 +199,7 @@ public static class DbInitializer
                     ProcessingAt = now.AddDays(-1).AddHours(2),
                     InTransitAt = now.AddHours(-6)
                 };
-                o3.Items.Add(new OrderItem { ProductId = products[2].Id, ProductName = products[2].Name, UnitPrice = products[2].Price, Quantity = 1 });
+                o3.Items.Add(new OrderItem { ProductId = orderProducts[2].Id, ProductName = orderProducts[2].Name, UnitPrice = orderProducts[2].Price, Quantity = 1 });
                 o3.Subtotal = o3.Items.Sum(i => i.UnitPrice * i.Quantity);
                 o3.Shipping = 79m;
                 o3.Total = o3.Subtotal + o3.Shipping;
@@ -208,7 +218,7 @@ public static class DbInitializer
                     CreatedAt = now.AddHours(-5),
                     ProcessingAt = now.AddHours(-4)
                 };
-                o4.Items.Add(new OrderItem { ProductId = products[5].Id, ProductName = products[5].Name, UnitPrice = products[5].Price, Quantity = 2, CustomNote = "Please print with my dog Luna." });
+                o4.Items.Add(new OrderItem { ProductId = orderProducts[5].Id, ProductName = orderProducts[5].Name, UnitPrice = orderProducts[5].Price, Quantity = 2, CustomNote = "Please print with my dog Luna." });
                 o4.Subtotal = o4.Items.Sum(i => i.UnitPrice * i.Quantity);
                 o4.Shipping = 79m;
                 o4.Total = o4.Subtotal + o4.Shipping;
@@ -225,7 +235,7 @@ public static class DbInitializer
                     ShippingStreet = demo.Street!, ShippingPostalCode = demo.PostalCode!,
                     CreatedAt = now.AddMinutes(-30)
                 };
-                o5.Items.Add(new OrderItem { ProductId = products[3].Id, ProductName = products[3].Name, UnitPrice = products[3].Price, Quantity = 3 });
+                o5.Items.Add(new OrderItem { ProductId = orderProducts[3].Id, ProductName = orderProducts[3].Name, UnitPrice = orderProducts[3].Price, Quantity = 3 });
                 o5.Subtotal = o5.Items.Sum(i => i.UnitPrice * i.Quantity);
                 o5.Shipping = 79m;
                 o5.Total = o5.Subtotal + o5.Shipping;
