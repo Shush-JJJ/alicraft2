@@ -77,7 +77,7 @@ public static class ShippingZones
     // Other tiers add modest surcharges for far/island provinces.
     private static readonly Dictionary<Zone, (decimal Fee, string Label)> ZoneInfo = new()
     {
-        [Zone.Local]          = (120m, "Local (Metro Manila / Rizal)"),
+        [Zone.Local]          = (90m,  "Local (Metro Manila / Rizal)"),
         [Zone.NearLuzon]      = (140m, "Near Luzon"),
         [Zone.CentralLuzon]   = (150m, "Central / Northern Luzon"),
         [Zone.FarNorthLuzon]  = (180m, "Far North Luzon"),
