@@ -5,9 +5,10 @@ namespace Alicraft2.Models;
 // Shared validation rules so the same regex / message is used everywhere.
 public static class ValidationPatterns
 {
-    // Password: minimum 8 chars, at least one uppercase letter, one digit, and one special character.
-    public const string Password      = @"^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$";
-    public const string PasswordError = "Password must be at least 8 characters and include an uppercase letter, a number, and a special character.";
+    // Password: minimum 8 chars, at least one uppercase letter, one digit, one special character, and NO whitespace.
+    // \S{8,} ensures the entire password contains no spaces/tabs/newlines.
+    public const string Password      = @"^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$";
+    public const string PasswordError = "Password must be at least 8 characters with an uppercase letter, a number, a special character, and no spaces.";
 
     // Philippine mobile number: 09XXXXXXXXX, +639XXXXXXXXX, or 639XXXXXXXXX (digits only).
     public const string Phone         = @"^(09|\+639|639)\d{9}$";
