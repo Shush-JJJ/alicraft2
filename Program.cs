@@ -45,12 +45,26 @@ static string NormalizePostgresConnectionString(string cs)
     if (userInfo.Length > 1 && !string.IsNullOrEmpty(userInfo[1]))
         parts.Add($"Password={Uri.UnescapeDataString(userInfo[1])}");
 
+    // libpq supports many parameters Npgsql doesn't understand. Some are
+    // important for native psql clients (e.g. channel_binding, which Neon
+    // emits) but Npgsql's NpgsqlConnectionStringBuilder will throw
+    // KeyNotFoundException if we forward them. Drop these silently.
+    var libpqOnlyKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "channel_binding", "gssencmode", "krbsrvname", "target_session_attrs",
+        "service", "passfile", "sslcert", "sslkey", "sslrootcert", "sslcrl",
+        "options"
+    };
+
     foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
     {
         var kv = pair.Split('=', 2);
         if (kv.Length == 0 || string.IsNullOrEmpty(kv[0])) continue;
         var key   = kv[0];
         var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "";
+
+        if (libpqOnlyKeys.Contains(key))
+            continue;
 
         // Translate libpq sslmode values to Npgsql's "SSL Mode" enum names.
         if (string.Equals(key, "sslmode", StringComparison.OrdinalIgnoreCase))
