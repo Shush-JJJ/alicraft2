@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Alicraft2.Data;
 using Alicraft2.Models;
+using Alicraft2.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,15 @@ public class AdminController : Controller
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _email;
+    private readonly ILogger<AdminController> _log;
 
-    public AdminController(AppDbContext db, IWebHostEnvironment env)
+    public AdminController(AppDbContext db, IWebHostEnvironment env, IEmailService email, ILogger<AdminController> log)
     {
         _db = db;
         _env = env;
+        _email = email;
+        _log = log;
     }
 
     public async Task<IActionResult> Index()
@@ -173,8 +178,13 @@ public class AdminController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateOrderStatus(int id, string status)
     {
-        var order = await _db.Orders.FindAsync(id);
+        // Include the User so we have an email address for the notification.
+        var order = await _db.Orders
+            .Include(o => o.User)
+            .FirstOrDefaultAsync(o => o.Id == id);
         if (order == null) return NotFound();
+
+        var previousStatus = order.Status;
 
         switch (status)
         {
@@ -203,8 +213,90 @@ public class AdminController : Controller
         }
 
         await _db.SaveChangesAsync();
+
+        // Notify the customer if the status actually changed. Email failures are
+        // logged but never break the admin's flow — the DB is already updated.
+        if (previousStatus != order.Status)
+        {
+            try
+            {
+                await SendOrderStatusEmailAsync(order);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed to send status-change email for order {OrderNumber}", order.OrderNumber);
+            }
+        }
+
         TempData["Success"] = $"Order status updated to {status}.";
         return RedirectToAction(nameof(OrderDetails), new { id });
+    }
+
+    /// <summary>
+    /// Sends a status-specific notification to the order's customer. Picks a
+    /// friendly subject + body for each terminal/transit status. The Pending
+    /// status is treated as the "initial" state and is intentionally not
+    /// notified — admins reverting to Pending shouldn't spam the customer.
+    /// </summary>
+    private async Task SendOrderStatusEmailAsync(Order order)
+    {
+        if (order.User == null || string.IsNullOrWhiteSpace(order.User.Email)) return;
+        if (order.Status == OrderStatus.Pending) return;
+
+        var rawName = string.IsNullOrWhiteSpace(order.ShippingName) ? order.User.Name : order.ShippingName;
+        var name = System.Net.WebUtility.HtmlEncode(rawName);
+        var orderNo = System.Net.WebUtility.HtmlEncode(order.OrderNumber);
+        var trackUrl = $"{_email.BaseUrl}/Orders/Track/{order.Id}";
+        var total = order.Total.ToString("N2", CultureInfo.InvariantCulture);
+
+        // Status-specific copy.
+        string headline, subject, body;
+        switch (order.Status)
+        {
+            case OrderStatus.Processing:
+                subject  = $"Your AliCraft order {order.OrderNumber} is being processed";
+                headline = "We're crafting your order!";
+                body     = $"Great news, {name}! We've received your payment and started preparing your order <strong>{orderNo}</strong>. We'll send another update as soon as it ships.";
+                break;
+            case OrderStatus.InTransit:
+                subject  = $"Your AliCraft order {order.OrderNumber} is on the way";
+                headline = "Your order is on its way!";
+                body     = $"Hi {name}, your order <strong>{orderNo}</strong> has been handed off to LBC and is now in transit. You'll have it soon!";
+                break;
+            case OrderStatus.Delivered:
+                subject  = $"Your AliCraft order {order.OrderNumber} has been delivered";
+                headline = "Delivered — enjoy your lithophane!";
+                body     = $"Hi {name}, your order <strong>{orderNo}</strong> has been marked as delivered. We hope you love it. If anything's off, just reply to this email.";
+                break;
+            case OrderStatus.Cancelled:
+                subject  = $"Your AliCraft order {order.OrderNumber} was cancelled";
+                headline = "Order cancelled";
+                body     = $"Hi {name}, your order <strong>{orderNo}</strong> has been cancelled. If you weren't expecting this, please contact us and we'll sort it out.";
+                break;
+            default:
+                return; // unknown status, skip the email
+        }
+
+        var html = $@"<!doctype html><html><body style='font-family:Arial,sans-serif;background:#f7f7f9;padding:24px;'>
+<div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;'>
+  <h2 style='margin-top:0;color:#7A3FA5;'>{headline}</h2>
+  <p>{body}</p>
+  <p style='background:#f3f4f6;border-radius:8px;padding:14px 16px;margin:18px 0;font-size:14px;color:#374151;'>
+    <strong>Order:</strong> {orderNo}<br>
+    <strong>Status:</strong> {order.Status}<br>
+    <strong>Total:</strong> ₱{total}
+  </p>
+  <p style='text-align:center;margin:28px 0;'>
+    <a href='{trackUrl}' style='background:linear-gradient(135deg,#E91E63,#7A3FA5,#2196F3);color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;display:inline-block;'>Track my order</a>
+  </p>
+  <p style='font-size:13px;color:#6b7280;'>Or paste this link in your browser:<br><span style='word-break:break-all;color:#374151;'>{trackUrl}</span></p>
+  <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0;'>
+  <p style='font-size:12px;color:#9ca3af;text-align:center;'>AliCraft Creations &middot; Custom 3D Lithophane Crafts</p>
+</div></body></html>";
+
+        var ok = await _email.SendAsync(order.User.Email, order.User.Name, subject, html);
+        if (!ok)
+            _log.LogWarning("Status-change email reported failure for order {OrderNumber} ({Status})", order.OrderNumber, order.Status);
     }
 
     // ---------- CHAT INBOX ----------
