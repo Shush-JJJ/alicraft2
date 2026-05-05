@@ -7,10 +7,10 @@ namespace Alicraft2.Data;
 /// checkout. Fees are flat per zone (no per-km pricing) so customers see a
 /// stable amount that's easy to reason about.
 ///
-/// Rates are anchored to LBC Express's published Small Kilobox (3kg) rate
-/// card (a realistic envelope for a packed lithophane frame or batch of
-/// keychains): ₱160 within Metro Manila, ₱190 NCR↔provincial Luzon. The
-/// extra zones add modest surcharges for the far/island provinces so the
+/// Rates are anchored to LBC Express's published Mini Kilobox (1kg) rate
+/// card — the right envelope for a single lithophane keychain or a small
+/// frame: ₱120 within Metro Manila, ₱150 NCR↔provincial Luzon. The extra
+/// zones add modest surcharges for the far/island provinces so the
 /// customer-facing fee reflects real-world distance even though LBC itself
 /// uses a flat provincial rate.
 /// </summary>
@@ -71,17 +71,17 @@ public static class ShippingZones
         ["Sorsogon"]         = Zone.Bicol,
     };
 
-    // Fees anchored to LBC's Small Kilobox (3kg) rate card:
-    //   Within Metro Manila ............... ₱160
-    //   NCR ↔ provincial Luzon ............ ₱190
+    // Fees anchored to LBC's Mini Kilobox (1kg) rate card:
+    //   Within Metro Manila ............... ₱120
+    //   NCR ↔ provincial Luzon ............ ₱150
     // Other tiers add modest surcharges for far/island provinces.
     private static readonly Dictionary<Zone, (decimal Fee, string Label)> ZoneInfo = new()
     {
-        [Zone.Local]          = (160m, "Local (Metro Manila / Rizal)"),
-        [Zone.NearLuzon]      = (180m, "Near Luzon"),
-        [Zone.CentralLuzon]   = (190m, "Central / Northern Luzon"),
-        [Zone.FarNorthLuzon]  = (220m, "Far North Luzon"),
-        [Zone.Bicol]          = (210m, "Bicol Region"),
+        [Zone.Local]          = (120m, "Local (Metro Manila / Rizal)"),
+        [Zone.NearLuzon]      = (140m, "Near Luzon"),
+        [Zone.CentralLuzon]   = (150m, "Central / Northern Luzon"),
+        [Zone.FarNorthLuzon]  = (180m, "Far North Luzon"),
+        [Zone.Bicol]          = (170m, "Bicol Region"),
     };
 
     /// <summary>Default fee shown before a province is selected. Falls back to Local.</summary>
