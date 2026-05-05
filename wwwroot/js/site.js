@@ -283,6 +283,27 @@
         });
     });
 
+    // No-space inputs (e.g. new-password fields).
+    // Inputs marked with data-no-space="true" reject all whitespace from any
+    // source: typing, paste, drag-drop, autofill, IME composition.
+    document.querySelectorAll('input[data-no-space="true"]').forEach(function (input) {
+        // Block the Space key from inserting a character.
+        input.addEventListener('keydown', function (e) {
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+            }
+        });
+        // Strip whitespace coming from any other source (paste / drag / autofill).
+        input.addEventListener('input', function () {
+            if (/\s/.test(this.value)) {
+                var caret = this.selectionStart;
+                var head = this.value.slice(0, caret).replace(/\s+/g, '');
+                this.value = this.value.replace(/\s+/g, '');
+                try { this.setSelectionRange(head.length, head.length); } catch (_) {}
+            }
+        });
+    });
+
     // File input enhancer
     // Wraps every <input type="file"> (that doesn't opt out with data-no-enhance)
     // so that: (1) a styled "Choose file" button is shown initially, (2) after a

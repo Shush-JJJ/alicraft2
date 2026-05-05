@@ -44,8 +44,7 @@
                                pattern="(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}"
                                title="At least 8 characters with one uppercase letter, one number, one special character, and no spaces."
                                autocomplete="new-password"
-                               onkeydown="if(event.key===' '){event.preventDefault();}"
-                               oninput="this.value=this.value.replace(/\s+/g,'')" />
+                               data-no-space="true" />
                         <small class="form-text">8+ chars, 1 uppercase, 1 number, 1 special character, no spaces</small>
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
@@ -54,8 +53,7 @@
                         <input asp-for="ConfirmPassword" class="form-control" type="password"
                                minlength="8"
                                autocomplete="new-password"
-                               onkeydown="if(event.key===' '){event.preventDefault();}"
-                               oninput="this.value=this.value.replace(/\s+/g,'')" />
+                               data-no-space="true" />
                         <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
                     </div>
                 </div>
