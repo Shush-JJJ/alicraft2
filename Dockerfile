@@ -16,6 +16,15 @@ RUN dotnet publish "Alicraft2.csproj" -c Release -o /app/publish --no-restore /p
 # ---------- Runtime stage ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
+
+# Npgsql probes for Kerberos/GSSAPI libraries during connection negotiation
+# even when not using integrated auth. The base aspnet image doesn't ship them,
+# so installing libgssapi-krb5-2 prevents "libgssapi_krb5.so.2: cannot open
+# shared object file" crashes when connecting to Postgres (e.g. Neon).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 # Render (and most container hosts) inject a $PORT env var. We expand it at runtime via sh,
