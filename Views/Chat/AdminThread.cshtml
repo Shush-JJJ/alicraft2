@@ -41,6 +41,11 @@
         <input type="hidden" name="userId" value="@threadUser?.Id" />
         <label class="icon-btn" title="Attach image" for="chatImage">📎</label>
         <input id="chatImage" type="file" name="image" accept="image/*" />
+        <div id="chatAttachChip" class="chat-attach-chip" hidden>
+            <img id="chatAttachThumb" class="thumb" src="" alt="" />
+            <span id="chatAttachName" class="name"></span>
+            <button type="button" id="chatAttachRemove" class="remove" aria-label="Remove attachment" title="Remove">×</button>
+        </div>
         <textarea name="body" id="chatBody" class="form-control" placeholder="Reply to customer…" rows="1"></textarea>
         <button type="submit" class="btn btn-primary">Send</button>
     </form>

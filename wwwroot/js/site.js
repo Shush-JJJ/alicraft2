@@ -402,4 +402,65 @@
 
         document.querySelectorAll('input[type="file"]').forEach(enhance);
     })();
+
+    // Chat attachment preview chip. The chat input keeps the native file picker
+    // hidden behind a paperclip label, which means a user previously had no
+    // visual confirmation that their image was actually attached. This wires
+    // the input to a small "thumbnail · filename · ×" chip so they can see
+    // (and cancel) the pending upload before they hit Send.
+    (function () {
+        var input = document.getElementById('chatImage');
+        var chip  = document.getElementById('chatAttachChip');
+        if (!input || !chip) return;
+        var thumb  = document.getElementById('chatAttachThumb');
+        var name   = document.getElementById('chatAttachName');
+        var remove = document.getElementById('chatAttachRemove');
+        var currentObjectUrl = null;
+
+        function clearObjectUrl() {
+            if (currentObjectUrl) {
+                URL.revokeObjectURL(currentObjectUrl);
+                currentObjectUrl = null;
+            }
+        }
+        function showFile(file) {
+            clearObjectUrl();
+            if (!file) {
+                chip.hidden = true;
+                if (thumb) thumb.src = '';
+                if (name) name.textContent = '';
+                return;
+            }
+            if (name) name.textContent = file.name;
+            if (thumb && file.type && file.type.indexOf('image/') === 0) {
+                currentObjectUrl = URL.createObjectURL(file);
+                thumb.src = currentObjectUrl;
+                thumb.style.display = '';
+            } else if (thumb) {
+                thumb.style.display = 'none';
+            }
+            chip.hidden = false;
+        }
+
+        input.addEventListener('change', function () {
+            showFile(input.files && input.files[0]);
+        });
+
+        if (remove) {
+            remove.addEventListener('click', function () {
+                // Most browsers accept value='' to clear; fall back to clone-and-replace
+                // if the input still reports a file (older Safari, edge cases).
+                try { input.value = ''; } catch (err) { /* noop */ }
+                if (input.files && input.files.length > 0) {
+                    var clone = input.cloneNode(false);
+                    input.parentNode.replaceChild(clone, input);
+                    input = clone;
+                    input.addEventListener('change', function () {
+                        showFile(input.files && input.files[0]);
+                    });
+                }
+                showFile(null);
+            });
+        }
+    })();
 })();

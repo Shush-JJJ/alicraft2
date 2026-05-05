@@ -363,7 +363,16 @@ textarea.form-control { min-height: 96px; resize: vertical; }
     white-space: pre-wrap; line-height: 1.3;
 }
 .chat-row.me .bubble { background: var(--ac-gradient); color: #fff; border-color: transparent; }
-.bubble img { max-width: 100%; border-radius: 10px; margin-top: .25rem; display: block; }
+/* Cap chat image previews so a portrait/large photo doesn't blow up the bubble.
+   Tap the thumbnail to open the full-resolution image in a new tab. */
+.bubble img {
+    max-width: 240px; max-height: 280px;
+    border-radius: 10px; margin-top: .25rem; display: block;
+    cursor: zoom-in;
+}
+@media (max-width: 480px) {
+    .bubble img { max-width: 200px; max-height: 240px; }
+}
 .bubble-wrap .meta {
     font-size: .68rem; opacity: .55; margin-top: .1rem; padding: 0 .35rem;
     color: var(--ac-muted); white-space: nowrap;
@@ -381,6 +390,30 @@ textarea.form-control { min-height: 96px; resize: vertical; }
     padding: .55rem; border-radius: 10px; background: #f3f4f6; border: 0; cursor: pointer;
 }
 .chat-input .icon-btn:hover { background: #e5e7eb; }
+/* "X is attached" chip shown while a chat image is selected but not yet sent.
+   Sits between the paperclip and the textarea so the user can confirm/cancel. */
+.chat-attach-chip {
+    display: flex; align-items: center; gap: .4rem;
+    background: #ede9f6; border: 1px solid #d6ccea;
+    border-radius: 999px; padding: .2rem .35rem .2rem .25rem;
+    max-width: 220px; min-width: 0;
+}
+.chat-attach-chip[hidden] { display: none; }
+.chat-attach-chip .thumb {
+    width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: 0 0 auto;
+    background: #fff;
+}
+.chat-attach-chip .name {
+    font-size: .82rem; color: #4b3a6a; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; min-width: 0;
+}
+.chat-attach-chip .remove {
+    border: 0; background: transparent; cursor: pointer;
+    width: 22px; height: 22px; border-radius: 50%;
+    color: #6b7280; line-height: 1; padding: 0; flex: 0 0 auto;
+    font-size: 1.1rem;
+}
+.chat-attach-chip .remove:hover { background: #ddd2ee; color: #2a1e3f; }
 
 /* Admin inbox list */
 .thread-list { display: flex; flex-direction: column; gap: .4rem; }
