@@ -242,9 +242,14 @@ public static class DbInitializer
     /// <summary>
     /// Adds new columns to existing SQLite DBs that were created before email-verification fields were introduced.
     /// EnsureCreatedAsync only creates the schema once; it doesn't add columns to existing tables.
+    /// Only applies to SQLite — Postgres starts fresh with the full schema so no legacy patching is needed.
     /// </summary>
     private static async Task EnsureSchemaUpgradesAsync(AppDbContext db)
     {
+        // PRAGMA table_info is SQLite-specific. On Postgres this would error out
+        // and isn't needed anyway since the schema is created correctly upfront.
+        if (!db.Database.IsSqlite()) return;
+
         var conn = db.Database.GetDbConnection();
         if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
 

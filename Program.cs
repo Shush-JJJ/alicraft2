@@ -8,7 +8,23 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Default")
                       ?? "Data Source=alicraft2.db";
 
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(connectionString));
+// Database provider selection:
+// - If the connection string looks like Postgres (URL form "postgresql://..." or
+//   key/value form "Host=..."), use Npgsql. That's what Render uses with Neon /
+//   Supabase so the data survives restarts.
+// - Otherwise treat it as SQLite (default for local development).
+static bool LooksLikePostgres(string cs)
+    => cs.Contains("postgresql://", StringComparison.OrdinalIgnoreCase)
+    || cs.Contains("postgres://",   StringComparison.OrdinalIgnoreCase)
+    || cs.Contains("Host=",         StringComparison.OrdinalIgnoreCase);
+
+builder.Services.AddDbContext<AppDbContext>(opt =>
+{
+    if (LooksLikePostgres(connectionString))
+        opt.UseNpgsql(connectionString);
+    else
+        opt.UseSqlite(connectionString);
+});
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
